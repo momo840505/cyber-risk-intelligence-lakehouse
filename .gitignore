@@ -1,0 +1,16 @@
+.venv/
+__pycache__/
+*.pyc
+
+data/bronze/
+data/silver/
+data/gold/
+
+.env
+.mlflow/
+mlruns/
+
+.DS_Store
+.vscode/
+# Python package metadata
+*.egg-info/
