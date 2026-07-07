@@ -1,159 +1,164 @@
 # 🛡️ Cyber Risk Intelligence Lakehouse
 
-!\[Python](https://img.shields.io/badge/Python-3.11%2B-blue)
-!\[PySpark](https://img.shields.io/badge/PySpark-ETL-orange)
-!\[Lakehouse](https://img.shields.io/badge/Architecture-Bronze%20%7C%20Silver%20%7C%20Gold-green)
-!\[Status](https://img.shields.io/badge/Status-ETL%20Pipeline%20Completed-success)
+![Python](https://img.shields.io/badge/Python-3.11%2B-blue)
+![PySpark](https://img.shields.io/badge/PySpark-ETL-orange)
+![Lakehouse](https://img.shields.io/badge/Architecture-Bronze%20%7C%20Silver%20%7C%20Gold-green)
+![Status](https://img.shields.io/badge/Status-ETL%20Pipeline%20Completed-success)
 
-A local cyber risk intelligence lakehouse built with **Python** and **PySpark**.  
-The project ingests public cybersecurity vulnerability data, cleans and standardises it into Silver tables, then builds Gold analytics tables for vulnerability prioritisation, vendor risk analysis, CWE weakness summaries, and monthly vulnerability trend monitoring.
+A PySpark-based cyber risk intelligence lakehouse for collecting, cleaning, transforming, and analysing public vulnerability intelligence data.
 
-\---
+This project combines **CVE**, **CVSS**, **EPSS**, and **CISA Known Exploited Vulnerabilities** signals into analytics-ready Gold tables for vulnerability prioritisation, vendor risk analysis, CWE weakness summaries, and monthly vulnerability trend monitoring.
 
-## 📌 Project Summary
+---
 
-Security teams often need to decide which vulnerabilities should be patched first.  
-However, raw vulnerability feeds are usually fragmented across different sources, such as CVE records, CVSS severity scores, EPSS exploit probability, and known exploited vulnerability lists.
+## 📌 Project Overview
 
-This project solves that problem by building a structured lakehouse pipeline that combines multiple vulnerability intelligence sources into analytics-ready tables.
+Cybersecurity teams often need to prioritise thousands of vulnerabilities across many products and vendors. Raw vulnerability feeds are useful, but they are usually fragmented across different sources.
 
-The pipeline follows a standard data engineering architecture:
+This project builds a local data lakehouse pipeline that turns raw cybersecurity data into structured, queryable, and analytics-ready datasets.
+
+The pipeline follows a classic **Bronze → Silver → Gold** data architecture:
 
 ```text
 Bronze Layer  →  Silver Layer  →  Gold Layer
 Raw data         Clean data       Analytics-ready risk intelligence
 ```
 
-\---
+---
 
-## 🎯 Objectives
+## 🎯 Project Goals
 
-The main goals of this project are to:
+- Ingest public cybersecurity vulnerability datasets.
+- Store raw records in a local Bronze layer.
+- Clean and standardise vulnerability data with PySpark.
+- Build Silver tables for KEV, EPSS, and NVD data.
+- Join multiple vulnerability intelligence sources.
+- Create Gold tables for risk scoring, reporting, and dashboard-ready analytics.
+- Prepare the project for future Streamlit, FastAPI, and machine learning extensions.
 
-* Ingest cybersecurity vulnerability data from public sources.
-* Store raw data locally in a Bronze layer.
-* Clean and standardise data using PySpark.
-* Build Silver tables for KEV, EPSS, and NVD vulnerability records.
-* Join vulnerability data across sources.
-* Create Gold tables for risk prioritisation and reporting.
-* Provide a foundation for future dashboard, API, and machine learning extensions.
-
-\---
+---
 
 ## 🧠 Why This Project Matters
 
-Not all vulnerabilities have the same level of operational risk.
+Not all vulnerabilities should be prioritised in the same way.
 
-A vulnerability with a high CVSS score is severe, but it may not be actively exploited.  
-A vulnerability with a high EPSS score is more likely to be exploited.  
-A vulnerability listed in CISA KEV has already been observed in real-world exploitation.
+A vulnerability may have a high CVSS score, but it may not be likely to be exploited.  
+Another vulnerability may have a lower severity score, but it may already be actively exploited in the real world.
 
-This project combines these signals to help prioritise vulnerabilities more effectively.
+This project combines multiple risk signals:
 
-\---
+- **CVSS**: technical severity
+- **EPSS**: probability of exploitation
+- **CISA KEV**: known real-world exploitation
+- **NVD metadata**: vendor, product, CWE, attack vector, and publication information
+
+By combining these signals, the project helps create a more practical vulnerability prioritisation workflow.
+
+---
 
 ## 🏗️ Lakehouse Architecture
 
 ```mermaid
 flowchart TD
+    A["Public Cybersecurity Data"] --> B["Bronze Layer"]
+    B --> C["Silver ETL - PySpark"]
 
-&#x20;   A\[Public Cybersecurity<br/>Data Sources] --> B\[Bronze Layer<br/>Raw Data]
+    C --> D["Silver KEV"]
+    C --> E["Silver EPSS"]
+    C --> F["Silver NVD"]
 
-&#x20;   B --> C\[Silver ETL<br/>PySpark Cleaning]
+    D --> G["Gold ETL - Risk Intelligence"]
+    E --> G
+    F --> G
 
+    G --> H["Vulnerability Priority"]
+    G --> I["Vendor Risk Summary"]
+    G --> J["Monthly Trends"]
+    G --> K["CWE Risk Summary"]
 
+    H --> L["Future Dashboard / API / ML"]
+    I --> L
+    J --> L
+    K --> L
+```
 
-&#x20;   C --> D\[Silver KEV]
+### Architecture Summary
 
-&#x20;   C --> E\[Silver EPSS]
+```text
+Public Cybersecurity Sources
+        |
+        v
+Bronze Layer
+Raw KEV, EPSS, and NVD data
+        |
+        v
+Silver Layer
+Cleaned and standardised vulnerability tables
+        |
+        v
+Gold Layer
+Analytics-ready risk intelligence tables
+        |
+        v
+Future Dashboard / API / Machine Learning
+```
 
-&#x20;   C --> F\[Silver NVD]
-
-
-
-&#x20;   D --> G\[Gold ETL<br/>Risk Intelligence]
-
-&#x20;   E --> G
-
-&#x20;   F --> G
-
-
-
-&#x20;   G --> H\[Vulnerability<br/>Priority]
-
-&#x20;   G --> I\[Vendor Risk<br/>Summary]
-
-&#x20;   G --> J\[Monthly<br/>Trends]
-
-&#x20;   G --> K\[CWE Risk<br/>Summary]
-
-
-
-&#x20;   H --> L\[Future Dashboard<br/>API / ML]
-
-&#x20;   I --> L
-
-&#x20;   J --> L
-
-&#x20;   K --> L```
-
-\---
+---
 
 ## 🗂️ Data Sources
 
-This project is designed around three main public cybersecurity intelligence sources:
-
-### 1\. CISA Known Exploited Vulnerabilities
+### 1. CISA Known Exploited Vulnerabilities
 
 Used to identify vulnerabilities that are known to have been exploited in the real world.
 
 Main information includes:
 
-* CVE ID
-* Vendor / project
-* Product
-* Vulnerability name
-* Date added
-* Due date
-* Required action
-* Known ransomware campaign use
+- CVE ID
+- Vendor or project
+- Product
+- Vulnerability name
+- Date added
+- Due date
+- Required action
+- Known ransomware campaign use
 
-\---
+---
 
-### 2\. FIRST EPSS
+### 2. FIRST EPSS
 
-Used to estimate the probability that a vulnerability may be exploited.
-
-Main information includes:
-
-* CVE ID
-* EPSS score
-* EPSS percentile
-* EPSS date
-
-\---
-
-### 3\. NVD Recent CVE Data
-
-Used to extract vulnerability metadata, CVSS severity, affected products, weakness category, and publication dates.
+Used to estimate how likely a vulnerability is to be exploited.
 
 Main information includes:
 
-* CVE ID
-* Published date
-* Last modified date
-* Vulnerability description
-* CWE ID
-* Affected vendor
-* Affected product
-* CVSS score
-* CVSS severity
-* Attack vector
-* Attack complexity
-* User interaction
-* Impact metrics
+- CVE ID
+- EPSS score
+- EPSS percentile
+- EPSS date
 
-\---
+---
+
+### 3. NVD CVE Data
+
+Used to extract vulnerability metadata, CVSS scores, affected vendors/products, CWE categories, and publication dates.
+
+Main information includes:
+
+- CVE ID
+- Published date
+- Last modified date
+- Vulnerability description
+- CWE ID
+- Affected vendor
+- Affected product
+- CVSS score
+- CVSS severity
+- CVSS vector string
+- Attack vector
+- Attack complexity
+- User interaction
+- Impact metrics
+
+---
 
 ## 📁 Project Structure
 
@@ -161,29 +166,29 @@ Main information includes:
 cyber-risk-intelligence-lakehouse/
 │
 ├── scripts/
-│   ├── inspect\_lakehouse.py
-│   └── run\_ingestion.py
+│   ├── inspect_lakehouse.py
+│   └── run_ingestion.py
 │
 ├── src/
-│   └── cyber\_risk/
-│       ├── \_\_init\_\_.py
+│   └── cyber_risk/
+│       ├── __init__.py
 │       ├── config.py
 │       │
 │       ├── ingestion/
-│       │   ├── \_\_init\_\_.py
-│       │   ├── download\_epss.py
-│       │   ├── download\_kev.py
-│       │   ├── download\_nvd\_recent.py
-│       │   └── http\_client.py
+│       │   ├── __init__.py
+│       │   ├── download_epss.py
+│       │   ├── download_kev.py
+│       │   ├── download_nvd_recent.py
+│       │   └── http_client.py
 │       │
 │       ├── etl/
-│       │   ├── \_\_init\_\_.py
-│       │   ├── spark\_session.py
-│       │   ├── build\_silver\_tables.py
-│       │   └── build\_gold\_tables.py
+│       │   ├── __init__.py
+│       │   ├── spark_session.py
+│       │   ├── build_silver_tables.py
+│       │   └── build_gold_tables.py
 │       │
 │       └── quality/
-│           └── \_\_init\_\_.py
+│           └── __init__.py
 │
 ├── .gitignore
 ├── pyproject.toml
@@ -191,13 +196,11 @@ cyber-risk-intelligence-lakehouse/
 └── README.md
 ```
 
-\---
+---
 
 ## 🥉 Bronze Layer
 
-The Bronze layer stores raw downloaded vulnerability data.
-
-This layer is intentionally excluded from Git because it contains generated local data files.
+The Bronze layer stores raw downloaded cybersecurity data.
 
 Expected local folder:
 
@@ -205,7 +208,7 @@ Expected local folder:
 data/bronze/
 ```
 
-Example raw datasets:
+Example raw data folders:
 
 ```text
 data/bronze/kev/
@@ -213,18 +216,20 @@ data/bronze/epss/
 data/bronze/nvd/
 ```
 
-\---
+The Bronze layer is excluded from Git because it contains generated local data files.
+
+---
 
 ## 🥈 Silver Layer
 
-The Silver layer contains cleaned and standardised vulnerability data.
+The Silver layer contains cleaned and standardised datasets.
 
 Generated Silver tables:
 
 ```text
-data/silver/silver\_kev
-data/silver/silver\_epss
-data/silver/silver\_nvd
+data/silver/silver_kev
+data/silver/silver_epss
+data/silver/silver_nvd
 ```
 
 Validated Silver output:
@@ -242,19 +247,19 @@ Purpose: clean and standardise known exploited vulnerability records.
 Important fields:
 
 ```text
-cve\_id
-vendor\_project
+cve_id
+vendor_project
 product
-vulnerability\_name
-date\_added
-due\_date
-known\_ransomware\_campaign\_use
-required\_action
-short\_description
+vulnerability_name
+date_added
+due_date
+known_ransomware_campaign_use
+required_action
+short_description
 notes
-cwe\_list
-date\_added\_year
-date\_added\_month
+cwe_list
+date_added_year
+date_added_month
 ```
 
 ### Silver EPSS Table
@@ -264,12 +269,12 @@ Purpose: clean and standardise exploit probability scores.
 Important fields:
 
 ```text
-cve\_id
-epss\_score
-epss\_percentile
-epss\_date
-epss\_year
-epss\_month
+cve_id
+epss_score
+epss_percentile
+epss_date
+epss_year
+epss_month
 ```
 
 ### Silver NVD Table
@@ -279,47 +284,47 @@ Purpose: clean and standardise CVE metadata, CVSS severity, CWE category, and af
 Important fields:
 
 ```text
-cve\_id
-source\_identifier
-published\_datetime
-last\_modified\_datetime
-vulnerability\_status
+cve_id
+source_identifier
+published_datetime
+last_modified_datetime
+vulnerability_status
 description
-cwe\_id
-affected\_vendor
-affected\_product
-affected\_entry\_count
-reference\_count
-cvss\_version
-cvss\_base\_score
-cvss\_base\_severity
-cvss\_vector\_string
-attack\_vector
-attack\_complexity
-privileges\_required
-user\_interaction
-confidentiality\_impact
-integrity\_impact
-availability\_impact
-published\_date
-last\_modified\_date
-published\_year
-published\_month
+cwe_id
+affected_vendor
+affected_product
+affected_entry_count
+reference_count
+cvss_version
+cvss_base_score
+cvss_base_severity
+cvss_vector_string
+attack_vector
+attack_complexity
+privileges_required
+user_interaction
+confidentiality_impact
+integrity_impact
+availability_impact
+published_date
+last_modified_date
+published_year
+published_month
 ```
 
-\---
+---
 
 ## 🥇 Gold Layer
 
-The Gold layer contains analytics-ready risk intelligence tables.
+The Gold layer contains analytics-ready cyber risk intelligence tables.
 
 Generated Gold tables:
 
 ```text
-data/gold/vulnerability\_priority
-data/gold/vendor\_risk\_summary
-data/gold/monthly\_vulnerability\_trends
-data/gold/cwe\_risk\_summary
+data/gold/vulnerability_priority
+data/gold/vendor_risk_summary
+data/gold/monthly_vulnerability_trends
+data/gold/cwe_risk_summary
 ```
 
 Validated Gold output:
@@ -331,7 +336,7 @@ Gold Monthly Trends: 2 rows
 Gold CWE Risk Summary: 331 rows
 ```
 
-\---
+---
 
 ## 📊 Gold Table 1: Vulnerability Priority
 
@@ -339,60 +344,60 @@ This is the main analytics table.
 
 It combines:
 
-* NVD vulnerability metadata
-* CVSS severity information
-* EPSS exploitation probability
-* CISA KEV known exploited status
-* Vendor and product information
-* Risk score
-* Priority level
+- NVD vulnerability metadata
+- CVSS severity information
+- EPSS exploitation probability
+- CISA KEV known exploited status
+- Vendor and product information
+- Risk score
+- Priority level
 
 Important fields:
 
 ```text
-cve\_id
-published\_date
-last\_modified\_date
-vulnerability\_status
+cve_id
+published_date
+last_modified_date
+vulnerability_status
 description
-cwe\_id
+cwe_id
 vendor
-product\_name
-cvss\_version
-cvss\_base\_score
-cvss\_base\_severity
-cvss\_vector\_string
-attack\_vector
-attack\_complexity
-privileges\_required
-user\_interaction
-confidentiality\_impact
-integrity\_impact
-availability\_impact
-epss\_date
-epss\_score
-epss\_percentile
-is\_known\_exploited
-known\_ransomware\_campaign\_use
-date\_added
-due\_date
-required\_action
-risk\_score
-priority\_level
-reference\_count
-affected\_entry\_count
-published\_year
-published\_month
+product_name
+cvss_version
+cvss_base_score
+cvss_base_severity
+cvss_vector_string
+attack_vector
+attack_complexity
+privileges_required
+user_interaction
+confidentiality_impact
+integrity_impact
+availability_impact
+epss_date
+epss_score
+epss_percentile
+is_known_exploited
+known_ransomware_campaign_use
+date_added
+due_date
+required_action
+risk_score
+priority_level
+reference_count
+affected_entry_count
+published_year
+published_month
 ```
 
 Example use cases:
 
-* Find the highest priority vulnerabilities.
-* Identify known exploited vulnerabilities.
-* Combine severity and exploit probability.
-* Support patch prioritisation decisions.
+- Find the highest priority vulnerabilities.
+- Identify known exploited vulnerabilities.
+- Combine severity and exploit probability.
+- Support patch prioritisation decisions.
 
-\---
+---
 
 ## 🏢 Gold Table 2: Vendor Risk Summary
 
@@ -402,23 +407,23 @@ Important fields:
 
 ```text
 vendor
-product\_name
-total\_vulnerabilities
-known\_exploited\_count
-average\_risk\_score
-maximum\_risk\_score
-average\_epss\_score
-critical\_count
-high\_count
+product_name
+total_vulnerabilities
+known_exploited_count
+average_risk_score
+maximum_risk_score
+average_epss_score
+critical_count
+high_count
 ```
 
 Example use cases:
 
-* Identify vendors with high-risk products.
-* Compare products by vulnerability concentration.
-* Support vendor-level cyber risk reporting.
+- Identify vendors with high-risk products.
+- Compare products by vulnerability concentration.
+- Support vendor-level cyber risk reporting.
 
-\---
+---
 
 ## 📅 Gold Table 3: Monthly Vulnerability Trends
 
@@ -427,15 +432,15 @@ This table summarises vulnerability activity by year and month.
 Important fields:
 
 ```text
-published\_year
-published\_month
-total\_cve\_count
-known\_exploited\_count
-average\_cvss\_score
-average\_epss\_score
-critical\_count
-high\_count
-network\_attack\_vector\_count
+published_year
+published_month
+total_cve_count
+known_exploited_count
+average_cvss_score
+average_epss_score
+critical_count
+high_count
+network_attack_vector_count
 ```
 
 Validated monthly trend output:
@@ -447,11 +452,11 @@ Validated monthly trend output:
 
 Example use cases:
 
-* Track vulnerability publication volume over time.
-* Monitor monthly critical and high severity counts.
-* Identify changes in network-based attack exposure.
+- Track vulnerability publication volume over time.
+- Monitor monthly critical and high severity counts.
+- Identify changes in network-based attack exposure.
 
-\---
+---
 
 ## 🧬 Gold Table 4: CWE Risk Summary
 
@@ -460,22 +465,22 @@ This table aggregates vulnerability risk by CWE weakness category.
 Important fields:
 
 ```text
-cwe\_id
-total\_vulnerabilities
-known\_exploited\_count
-average\_risk\_score
-maximum\_risk\_score
-average\_cvss\_score
-average\_epss\_score
+cwe_id
+total_vulnerabilities
+known_exploited_count
+average_risk_score
+maximum_risk_score
+average_cvss_score
+average_epss_score
 ```
 
 Example use cases:
 
-* Identify common weakness categories.
-* Compare CWE groups by risk score.
-* Support secure development and remediation planning.
+- Identify common weakness categories.
+- Compare CWE groups by risk score.
+- Support secure development and remediation planning.
 
-\---
+---
 
 ## 🧮 Risk Scoring Logic
 
@@ -491,7 +496,7 @@ Reference count
 Affected product information
 ```
 
-Conceptually:
+Conceptual logic:
 
 ```text
 Risk Score = severity signal + exploitability signal + known exploitation signal + exposure context
@@ -517,7 +522,7 @@ Low: 3,399
 
 This makes it easier to focus on vulnerabilities that are severe, likely to be exploited, or already known to be exploited.
 
-\---
+---
 
 ## ✅ Validated Pipeline Output
 
@@ -559,49 +564,49 @@ Rows: 331
 Columns: 7
 ```
 
-\---
+---
 
 ## ⚙️ Tech Stack
 
-|Category|Tools|
-|-|-|
-|Language|Python|
-|Data Processing|PySpark|
-|Storage Format|Parquet|
-|Data Architecture|Bronze, Silver, Gold Lakehouse|
-|Data Sources|CISA KEV, FIRST EPSS, NVD CVE data|
-|Development|Git, GitHub, Virtual Environment|
-|Future Dashboard|Streamlit, Plotly|
-|Future API|FastAPI|
-|Future ML|scikit-learn, XGBoost, SHAP, MLflow|
+| Category | Tools |
+|---|---|
+| Language | Python |
+| Data Processing | PySpark |
+| Storage Format | Parquet |
+| Architecture | Bronze, Silver, Gold Lakehouse |
+| Data Sources | CISA KEV, FIRST EPSS, NVD CVE data |
+| Development | Git, GitHub, Virtual Environment |
+| Planned Dashboard | Streamlit, Plotly |
+| Planned API | FastAPI |
+| Planned ML | scikit-learn, XGBoost, SHAP, MLflow |
 
-\---
+---
 
 ## 🚀 How to Run Locally
 
-### 1\. Clone the repository
+### 1. Clone the repository
 
 ```bash
 git clone https://github.com/momo840505/cyber-risk-intelligence-lakehouse.git
 cd cyber-risk-intelligence-lakehouse
 ```
 
-### 2\. Create a virtual environment
+### 2. Create a virtual environment
 
 ```bash
 python -m venv .venv
 ```
 
-### 3\. Activate the virtual environment
+### 3. Activate the virtual environment
 
 Windows PowerShell:
 
 ```powershell
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-.\\.venv\\Scripts\\Activate.ps1
+.\.venv\Scripts\Activate.ps1
 ```
 
-### 4\. Install dependencies
+### 4. Install dependencies
 
 ```powershell
 python -m pip install --upgrade pip
@@ -609,110 +614,110 @@ python -m pip install -r requirements.txt
 python -m pip install -e .
 ```
 
-### 5\. Configure Hadoop winutils on Windows
+### 5. Configure Hadoop winutils on Windows
 
 PySpark on Windows may require `winutils.exe`.
 
 Example setup:
 
 ```powershell
-$env:HADOOP\_HOME = "C:\\hadoop"
-$env:Path = "C:\\hadoop\\bin;$env:Path"
+$env:HADOOP_HOME = "C:\hadoop"
+$env:Path = "C:\hadoop\bin;$env:Path"
 where.exe winutils
 ```
 
 Expected output:
 
 ```text
-C:\\hadoop\\bin\\winutils.exe
+C:\hadoop\bin\winutils.exe
 ```
 
-### 6\. Run data ingestion
+### 6. Run data ingestion
 
 ```powershell
-python .\\scripts\\run\_ingestion.py
+python .\scripts\run_ingestion.py
 ```
 
-### 7\. Build Silver tables
+### 7. Build Silver tables
 
 ```powershell
-python -m cyber\_risk.etl.build\_silver\_tables
+python -m cyber_risk.etl.build_silver_tables
 ```
 
-### 8\. Build Gold tables
+### 8. Build Gold tables
 
 ```powershell
-python -m cyber\_risk.etl.build\_gold\_tables
+python -m cyber_risk.etl.build_gold_tables
 ```
 
-### 9\. Inspect lakehouse outputs
+### 9. Inspect lakehouse outputs
 
 ```powershell
-python .\\scripts\\inspect\_lakehouse.py
+python .\scripts\inspect_lakehouse.py
 ```
 
-\---
+---
 
 ## 🧪 Example Commands Used During Validation
 
 ```powershell
-python -m cyber\_risk.etl.build\_silver\_tables
-python -m cyber\_risk.etl.build\_gold\_tables
-python .\\scripts\\inspect\_lakehouse.py
+python -m cyber_risk.etl.build_silver_tables
+python -m cyber_risk.etl.build_gold_tables
+python .\scripts\inspect_lakehouse.py
 ```
 
 Expected folders after successful execution:
 
 ```text
-data/silver/silver\_kev
-data/silver/silver\_epss
-data/silver/silver\_nvd
+data/silver/silver_kev
+data/silver/silver_epss
+data/silver/silver_nvd
 
-data/gold/vulnerability\_priority
-data/gold/vendor\_risk\_summary
-data/gold/monthly\_vulnerability\_trends
-data/gold/cwe\_risk\_summary
+data/gold/vulnerability_priority
+data/gold/vendor_risk_summary
+data/gold/monthly_vulnerability_trends
+data/gold/cwe_risk_summary
 ```
 
-\---
+---
 
 ## 📈 Example Insights
 
 Based on the generated Gold tables:
 
-* The lakehouse contains more than 7,500 cleaned vulnerability records.
-* Most vulnerabilities are classified as Medium or Low priority.
-* A small number of vulnerabilities are classified as Critical or High priority.
-* Known exploited vulnerabilities can be separated from general CVE records.
-* Vendor-level aggregation helps identify products with concentrated cyber risk.
-* CWE summaries help identify common weakness categories.
-* Monthly trends show vulnerability publication patterns over time.
+- The lakehouse contains more than 7,500 cleaned vulnerability records.
+- Most vulnerabilities are classified as Medium or Low priority.
+- A small number of vulnerabilities are classified as Critical or High priority.
+- Known exploited vulnerabilities can be separated from general CVE records.
+- Vendor-level aggregation helps identify products with concentrated cyber risk.
+- CWE summaries help identify common weakness categories.
+- Monthly trends show vulnerability publication patterns over time.
 
-\---
+---
 
 ## 🧭 Current Project Status
 
 Completed:
 
-* Project structure
-* Data ingestion modules
-* PySpark session setup
-* Silver ETL
-* Gold ETL
-* Lakehouse inspection script
-* GitHub repository setup
-* Professional README documentation
+- Project structure
+- Data ingestion modules
+- PySpark session setup
+- Silver ETL
+- Gold ETL
+- Lakehouse inspection script
+- GitHub repository setup
+- Professional README documentation
 
-In progress / planned:
+Planned:
 
-* Streamlit dashboard
-* Interactive charts
-* Data quality checks
-* Machine learning risk classifier
-* FastAPI query service
-* Automated scheduled ingestion
+- Streamlit dashboard
+- Interactive charts
+- Data quality checks
+- Machine learning risk classifier
+- FastAPI query service
+- Automated scheduled ingestion
 
-\---
+---
 
 ## 🔮 Future Improvements
 
@@ -722,34 +727,34 @@ Add a Streamlit dashboard for interactive vulnerability exploration.
 
 Planned dashboard pages:
 
-* Executive overview
-* Top priority vulnerabilities
-* Vendor risk ranking
-* CWE risk analysis
-* Monthly vulnerability trends
-* Known exploited vulnerability explorer
+- Executive overview
+- Top priority vulnerabilities
+- Vendor risk ranking
+- CWE risk analysis
+- Monthly vulnerability trends
+- Known exploited vulnerability explorer
 
 ### Data Quality
 
 Add validation checks for:
 
-* Missing CVE IDs
-* Duplicate CVE records
-* Invalid CVSS score ranges
-* Invalid EPSS score ranges
-* Null critical fields
-* Unexpected schema changes
+- Missing CVE IDs
+- Duplicate CVE records
+- Invalid CVSS score ranges
+- Invalid EPSS score ranges
+- Null critical fields
+- Unexpected schema changes
 
 ### Machine Learning
 
 Add a model to classify vulnerability priority using:
 
-* CVSS metrics
-* EPSS score
-* Attack vector
-* Attack complexity
-* Vendor/product information
-* Known exploitation status
+- CVSS metrics
+- EPSS score
+- Attack vector
+- Attack complexity
+- Vendor/product information
+- Known exploitation status
 
 ### API Layer
 
@@ -762,5 +767,22 @@ Add FastAPI endpoints such as:
 /api/trends/monthly
 ```
 
-### 
+### Automation
 
+Add scheduled ingestion to keep vulnerability intelligence up to date.
+
+---
+
+## 👤 Author
+
+**Mo Mo**  
+Master of Data Science Student  
+GitHub: [@momo840505](https://github.com/momo840505)
+
+---
+
+## 📌 Repository
+
+```text
+https://github.com/momo840505/cyber-risk-intelligence-lakehouse
+```
