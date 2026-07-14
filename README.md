@@ -1,240 +1,314 @@
-# Cyber Risk Intelligence Lakehouse + ML Prioritisation
+# Cyber Risk Intelligence Lakehouse + ML Explainability
 
 ![Python](https://img.shields.io/badge/Python-3.11-blue)
 ![PySpark](https://img.shields.io/badge/PySpark-ETL-orange)
 ![dbt](https://img.shields.io/badge/dbt-Analytics%20Engineering-red)
-![DuckDB](https://img.shields.io/badge/DuckDB-Local%20Warehouse-yellow)
-![MLflow](https://img.shields.io/badge/MLflow-Experiment%20Tracking-blue)
-![SHAP](https://img.shields.io/badge/SHAP-Explainable%20AI-purple)
+![DuckDB](https://img.shields.io/badge/DuckDB-Analytics-yellow)
 ![Streamlit](https://img.shields.io/badge/Streamlit-Dashboard-ff4b4b)
-![CI](https://img.shields.io/badge/GitHub%20Actions-Passing-brightgreen)
+![MLflow](https://img.shields.io/badge/MLflow-Tracking-blueviolet)
+![SHAP](https://img.shields.io/badge/SHAP-Explainability-green)
+![GitHub Actions](https://img.shields.io/badge/CI-GitHub%20Actions-success)
 
-A production-style cyber risk intelligence project that ingests public vulnerability intelligence, builds a Bronze / Silver / Gold lakehouse with PySpark, transforms analytics marts with dbt and DuckDB, validates data quality, visualises cyber risk in Streamlit, and trains an explainable machine learning classifier with MLflow and SHAP.
+A cyber risk intelligence lakehouse that ingests public vulnerability intelligence, transforms it through Bronze, Silver, and Gold layers using PySpark, builds SQL analytics marts with dbt and DuckDB, validates data quality, provides a Streamlit dashboard, and trains an explainable machine learning model for vulnerability priority classification.
 
----
-
-## 🚀 Project Overview
-
-This project simulates an end-to-end cyber risk intelligence platform for vulnerability prioritisation.
-
-It combines data engineering, analytics engineering, dashboarding, machine learning, model explainability, and CI automation in one portfolio-ready repository.
-
-The pipeline ingests and combines:
-
-- **CISA KEV** — Known Exploited Vulnerabilities
-- **FIRST EPSS** — Exploit Prediction Scoring System
-- **NVD CVE** — Recent vulnerability records, CVSS severity, CWE, affected products, and references
-
-The final output helps answer questions such as:
-
-- Which vulnerabilities should be prioritised first?
-- Which vendors and products carry the highest cyber risk?
-- Which CWE categories are most associated with high-risk vulnerabilities?
-- How are vulnerabilities changing month by month?
-- Which features drive machine learning priority predictions?
+This project is designed as a portfolio-grade end-to-end data product combining data engineering, analytics engineering, machine learning, explainability, and software engineering practices.
 
 ---
 
-## ✅ What This Project Demonstrates
+## Project Highlights
 
-| Area | Implemented |
-|---|---|
-| Data ingestion | Public cyber risk APIs and JSON/JSONL outputs |
-| Data lakehouse | Bronze, Silver, and Gold data layers |
-| Distributed processing | PySpark ETL pipeline |
-| Analytics engineering | dbt models, tests, and documentation |
-| Local warehouse | DuckDB analytics database |
-| Data quality | Automated validation report |
-| Dashboard | Streamlit + Plotly interactive dashboard |
-| Machine learning | Random Forest priority classifier |
-| Model explainability | SHAP feature importance |
-| Experiment tracking | MLflow local tracking |
-| CI/CD foundation | GitHub Actions Python CI |
-| Portfolio readiness | Professional README, screenshots, reports, and release history |
+- Ingests public cyber risk data from CISA KEV, EPSS, and NVD CVE feeds.
+- Builds a local lakehouse using Bronze, Silver, and Gold data layers.
+- Uses PySpark for scalable ETL and data transformation.
+- Creates analytics-ready Gold tables for vulnerability prioritisation, vendor risk, monthly trends, and CWE risk.
+- Loads Gold tables into DuckDB for local analytical querying.
+- Uses dbt to build staging views and analytics marts.
+- Runs dbt tests for source and mart-level data validation.
+- Exports a data quality report to CSV.
+- Provides an interactive Streamlit dashboard for cyber risk analysis.
+- Trains a Random Forest priority classifier using analytics mart data.
+- Tracks ML experiments with MLflow.
+- Explains model behaviour using feature importance and SHAP.
+- Uses GitHub Actions for CI checks.
 
 ---
 
-## 🧱 Architecture
+## Architecture
 
 ```mermaid
-flowchart LR
+graph LR
     A[Public Cyber Risk Sources] --> B[Bronze Layer<br/>Raw JSON and JSONL]
     B --> C[Silver Layer<br/>Cleaned PySpark Tables]
     C --> D[Gold Layer<br/>Risk Analytics Tables]
+
     D --> E[DuckDB Analytics Database]
-    E --> F[dbt Staging Models]
-    F --> G[dbt Mart Models]
-    G --> H[Streamlit Dashboard]
-    G --> I[ML Priority Classifier]
-    I --> J[MLflow Tracking]
-    I --> K[SHAP Explainability Reports]
-    D --> L[Data Quality Validation]
-    L --> M[CSV Quality Report]
+    D --> F[Data Quality Validation]
+
+    E --> G[dbt Staging Models]
+    G --> H[dbt Mart Models]
+
+    F --> I[CSV Quality Report]
+
+    H --> J[Streamlit Dashboard]
+    H --> K[ML Priority Classifier]
+
+    K --> L[MLflow Tracking]
+    K --> M[SHAP Explainability Reports]
+```
+
+The project follows a layered data architecture. Raw public vulnerability data is ingested into the Bronze layer, cleaned into Silver PySpark tables, transformed into Gold analytics tables, loaded into DuckDB, modelled with dbt, visualised through Streamlit, and used for machine learning and explainability workflows.
+
+---
+
+## Data Sources
+
+### CISA Known Exploited Vulnerabilities Catalog
+
+CISA KEV provides a list of vulnerabilities that are known to be exploited in the wild. In this project, KEV is used to identify CVEs with confirmed exploitation evidence.
+
+### EPSS Exploit Prediction Scoring System
+
+EPSS provides probability-like exploitation signals. In this project, EPSS scores are used as an additional risk signal where available.
+
+### NVD Recent CVE Feed
+
+NVD provides CVE descriptions, CVSS severity scores, CWE categories, affected vendors and products, references, and attack vector metadata.
+
+---
+
+## Tech Stack
+
+### Data Engineering
+
+- Python
+- PySpark
+- Parquet
+- JSON / JSONL
+- Bronze, Silver, Gold lakehouse design
+
+### Analytics Engineering
+
+- DuckDB
+- dbt
+- SQL models
+- Source tests
+- Mart tests
+
+### Dashboard and Reporting
+
+- Streamlit
+- Plotly
+- CSV reports
+- PNG report artifacts
+
+### Machine Learning
+
+- scikit-learn
+- Random Forest Classifier
+- MLflow
+- SHAP
+- joblib
+- matplotlib
+
+### Software Engineering
+
+- Git
+- GitHub
+- GitHub Actions
+- Modular Python scripts
+- Local reproducible pipeline runner
+
+---
+
+## Project Structure
+
+```text
+cyber-risk-intelligence-lakehouse/
+│
+├── app/
+│   └── dashboard.py
+│
+├── assets/
+│   ├── dashboard_overview.png
+│   ├── dashboard_risk_analysis.png
+│   └── dashboard_top_vulnerabilities.png
+│
+├── data/
+│   ├── bronze/
+│   ├── silver/
+│   └── gold/
+│
+├── dbt/
+│   └── cyber_risk_dbt/
+│       ├── dbt_project.yml
+│       ├── profiles.yml
+│       └── models/
+│           ├── sources.yml
+│           ├── staging/
+│           └── marts/
+│
+├── ml/
+│   └── train_priority_model.py
+│
+├── models/
+│   └── priority_classifier.joblib
+│
+├── reports/
+│   ├── data_quality_report.csv
+│   ├── model_metrics.json
+│   ├── classification_report.csv
+│   ├── confusion_matrix.csv
+│   ├── feature_importance.csv
+│   ├── feature_importance.png
+│   └── shap_feature_importance.png
+│
+├── scripts/
+│   ├── run_ingestion.py
+│   ├── build_analytics_database.py
+│   ├── validate_lakehouse.py
+│   ├── inspect_lakehouse.py
+│   ├── run_dbt.py
+│   ├── run_ml.py
+│   └── run_pipeline.py
+│
+├── src/
+│   └── cyber_risk/
+│       ├── ingestion/
+│       ├── etl/
+│       └── quality/
+│
+├── .github/
+│   └── workflows/
+│       └── python-ci.yml
+│
+├── requirements.txt
+├── pyproject.toml
+└── README.md
+```
+
+Note: local generated data, DuckDB files, MLflow tracking files, and model binaries are excluded from Git where appropriate.
+
+---
+
+## Pipeline Overview
+
+The full pipeline can be run with one command:
+
+```bash
+python scripts/run_pipeline.py
+```
+
+The pipeline runs:
+
+```text
+Bronze ingestion
+→ Silver PySpark ETL
+→ Gold analytics table build
+→ Data quality validation
+→ DuckDB analytics database build
+→ dbt staging and mart models
+→ dbt tests and docs generation
+→ Lakehouse output inspection
+```
+
+A separate ML workflow can be run with:
+
+```bash
+python scripts/run_ml.py
+```
+
+The ML workflow runs:
+
+```text
+dbt analytics mart build
+→ ML training data extraction
+→ Random Forest model training
+→ evaluation report generation
+→ feature importance export
+→ SHAP explainability export
+→ MLflow experiment tracking
 ```
 
 ---
 
-## 📦 Data Sources
+## Latest Validated Pipeline Output
 
-### CISA Known Exploited Vulnerabilities
+The latest local run produced the following outputs:
 
-Used to identify vulnerabilities that are already known to be exploited in the wild.
+```text
+Silver KEV: 1,638 rows
+Silver EPSS: 5,000 rows
+Silver NVD: 7,479 rows
 
-Main fields used:
+Gold Vulnerability Priority: 7,479 rows
+Gold Vendor Risk Summary: 2,936 rows
+Gold Monthly Vulnerability Trends: 2 rows
+Gold CWE Risk Summary: 317 rows
+```
 
-- CVE ID
-- Vendor / project
-- Product
-- Date added
-- Due date
-- Required action
-- Known ransomware campaign use
-- CWE list
-
-### FIRST EPSS
-
-Used as an exploitation probability signal.
-
-Main fields used:
-
-- CVE ID
-- EPSS score
-- EPSS percentile
-- EPSS date
-
-### NVD CVE
-
-Used as the main vulnerability detail source.
-
-Main fields used:
-
-- CVE ID
-- Published date
-- Last modified date
-- Description
-- CVSS score
-- CVSS severity
-- Attack vector
-- Attack complexity
-- Privileges required
-- User interaction
-- CWE ID
-- Affected vendor
-- Affected product
-- Reference count
+Because the project ingests live public vulnerability feeds, row counts can change over time.
 
 ---
 
-## 🏗️ Lakehouse Layers
+## Gold Analytics Tables
 
-### Bronze Layer
+### vulnerability_priority
 
-Raw ingested files are stored without transformation.
+The main CVE-level risk table. It combines NVD CVE metadata, CVSS severity, EPSS signals, CISA KEV exploitation evidence, reference counts, affected product counts, and a calculated risk score.
 
-```text
-data/bronze/
-├── kev/
-├── epss/
-└── nvd/
-```
+### vendor_risk_summary
 
-### Silver Layer
+Aggregates cyber risk by vendor and product. This table supports vendor-level prioritisation and helps identify software suppliers with a higher concentration of risky vulnerabilities.
 
-PySpark cleans and standardises source data into structured Parquet tables.
+### monthly_vulnerability_trends
 
-```text
-data/silver/
-├── kev/
-├── epss/
-└── nvd/
-```
+Aggregates vulnerability trends by published year and month. It supports monthly monitoring of CVE volume, severity, known exploitation, and network-exploitable vulnerabilities.
 
-Latest validated Silver output:
+### cwe_risk_summary
 
-| Table | Rows | Columns |
-|---|---:|---:|
-| Silver KEV | 1,638 | 13 |
-| Silver EPSS | 5,000 | 6 |
-| Silver NVD | 7,479 | 26 |
-
-### Gold Layer
-
-Gold tables are analytics-ready outputs used by validation, dashboarding, dbt, and machine learning.
-
-```text
-data/gold/
-├── vulnerability_priority/
-├── vendor_risk_summary/
-├── monthly_vulnerability_trends/
-└── cwe_risk_summary/
-```
-
-Latest validated Gold output:
-
-| Table | Rows | Description |
-|---|---:|---|
-| vulnerability_priority | 7,479 | CVE-level risk priority table |
-| vendor_risk_summary | 2,936 | Vendor and product-level risk summary |
-| monthly_vulnerability_trends | 2 | Monthly vulnerability trend summary |
-| cwe_risk_summary | 317 | CWE-level risk summary |
-
-> Row counts may change because the project ingests live public vulnerability data.
+Aggregates risk by CWE weakness category. It helps identify vulnerability classes that appear frequently or are associated with higher-risk CVEs.
 
 ---
 
-## 🧮 Risk Scoring Logic
+## Risk Scoring Logic
 
-The Gold vulnerability priority table combines multiple risk signals:
+The project calculates a combined risk score using multiple cyber risk signals:
 
 - CVSS base score
-- CVSS severity
-- EPSS score and percentile
-- Known exploited vulnerability flag
-- Attack vector
-- Privileges required
-- User interaction
+- CVSS severity label
+- EPSS score where available
+- Known exploited status from CISA KEV
 - Reference count
 - Affected product count
+- Attack vector and exploitability-related fields
 
-Priority levels are assigned as:
+The output is assigned into a priority level:
 
 ```text
-Critical
 High
 Medium
 Low
 ```
 
-Latest priority distribution:
-
-| Priority | Count |
-|---|---:|
-| High | 8 |
-| Medium | 4,188 |
-| Low | 3,283 |
+The priority level is used for dashboard filtering, analytics marts, and machine learning classification.
 
 ---
 
-## 🧪 Data Quality Validation
+## Data Quality Validation
 
-The project includes automated data quality checks for Gold tables.
+The validation workflow checks the Gold layer for common data quality issues:
 
-Validation checks include:
+- Required columns exist.
+- CVE IDs are not missing.
+- CVE IDs are unique.
+- CVSS scores are within the expected range of 0 to 10.
+- EPSS scores are within the expected range of 0 to 1.
+- Risk scores are within the expected project range.
+- Priority levels contain only valid labels.
+- Known exploited flags are valid 0 or 1 values.
+- Vendor, monthly trend, and CWE summary tables have valid row counts.
 
-- Row count checks
-- Required column checks
-- Missing CVE ID checks
-- Duplicate CVE ID checks
-- CVSS score range checks
-- EPSS score range checks
-- Risk score range checks
-- Priority level validity checks
-- Known exploited flag checks
-- Vendor/product summary checks
-- Monthly trend checks
-- CWE missing value checks
-
-Latest validation result:
+The latest validation result:
 
 ```text
 PASS: 18
@@ -242,53 +316,56 @@ WARN: 0
 FAIL: 0
 ```
 
-Validation output:
+A CSV quality report is exported to:
 
 ```text
 reports/data_quality_report.csv
 ```
 
-Run validation:
-
-```powershell
-python .\scripts\validate_lakehouse.py
-```
-
 ---
 
-## 🧱 dbt Analytics Layer
+## dbt Analytics Layer
 
-The project uses DuckDB as a local analytics warehouse and dbt for SQL-based analytics engineering.
+This project includes a dbt analytics engineering layer on top of the Gold PySpark tables.
 
-### DuckDB Database
+The Gold tables are first loaded into a local DuckDB database:
 
 ```text
 analytics/cyber_risk.duckdb
 ```
 
-The DuckDB database is generated locally and ignored by Git.
+Then dbt builds staging views and mart tables.
 
-### dbt Project
+### dbt Sources
 
 ```text
-dbt/cyber_risk_dbt/
-├── dbt_project.yml
-├── profiles.yml
-└── models/
-    ├── sources.yml
-    ├── staging/
-    └── marts/
+raw_vulnerability_priority
+raw_vendor_risk_summary
+raw_monthly_vulnerability_trends
+raw_cwe_risk_summary
 ```
 
-### dbt Models
+### dbt Staging Models
 
-| Layer | Models |
-|---|---|
-| Sources | `raw_vulnerability_priority`, `raw_vendor_risk_summary`, `raw_monthly_vulnerability_trends`, `raw_cwe_risk_summary` |
-| Staging | `stg_vulnerability_priority`, `stg_vendor_risk_summary`, `stg_monthly_vulnerability_trends`, `stg_cwe_risk_summary` |
-| Marts | `mart_vulnerability_priority`, `mart_vendor_risk_summary`, `mart_monthly_vulnerability_trends`, `mart_cwe_risk_summary` |
+```text
+stg_vulnerability_priority
+stg_vendor_risk_summary
+stg_monthly_vulnerability_trends
+stg_cwe_risk_summary
+```
 
-Latest dbt build result:
+### dbt Mart Models
+
+```text
+mart_vulnerability_priority
+mart_vendor_risk_summary
+mart_monthly_vulnerability_trends
+mart_cwe_risk_summary
+```
+
+### dbt Test Result
+
+The latest dbt build completed successfully:
 
 ```text
 PASS=26
@@ -298,40 +375,36 @@ SKIP=0
 TOTAL=26
 ```
 
-Run dbt workflow:
+The dbt documentation site can be generated and served locally:
 
-```powershell
-python .\scripts\run_dbt.py
-```
-
-Open dbt documentation:
-
-```powershell
-dbt docs serve --project-dir dbt\cyber_risk_dbt --profiles-dir dbt\cyber_risk_dbt
+```bash
+dbt docs generate --project-dir dbt/cyber_risk_dbt --profiles-dir dbt/cyber_risk_dbt
+dbt docs serve --project-dir dbt/cyber_risk_dbt --profiles-dir dbt/cyber_risk_dbt
 ```
 
 ---
 
-## 📊 Streamlit Dashboard
+## Streamlit Dashboard
 
-The project includes an interactive dashboard for cyber risk exploration.
+The Streamlit dashboard provides an interactive view of vulnerability risk intelligence.
 
-Run locally:
+Run it locally:
 
-```powershell
-python -m streamlit run app\dashboard.py
+```bash
+python -m streamlit run app/dashboard.py
 ```
 
-Dashboard features:
+Dashboard features include:
 
-- Executive KPI cards
+- Total CVE count
+- Known exploited vulnerability count
+- Average CVSS score
 - Priority distribution
-- CVSS and risk score distribution
-- Vendor risk summary
-- CWE risk ranking
-- Monthly vulnerability trends
+- Monthly vulnerability trend
+- Vendor and product risk ranking
+- CWE risk summary
 - Top vulnerability table
-- Interactive filters
+- Filters for priority, severity, attack vector, vendor, and CWE
 
 ### Dashboard Screenshots
 
@@ -343,14 +416,14 @@ Dashboard features:
 
 ---
 
-## 🤖 Machine Learning Priority Classifier
+## Machine Learning Priority Classifier
 
-The project trains a machine learning model to classify vulnerability priority levels.
+The project trains a machine learning model to classify vulnerability priority levels using the dbt mart table `mart_vulnerability_priority`.
 
-### Model
+### Model Type
 
 ```text
-RandomForestClassifier
+Random Forest Classifier
 ```
 
 ### Target
@@ -359,130 +432,106 @@ RandomForestClassifier
 priority_level
 ```
 
-Classes:
+### Input Features
+
+The model uses vulnerability severity, exploitation evidence, weakness category, attack conditions, and reference metadata.
+
+Key input features include:
+
+- `cvss_base_score`
+- `cvss_base_severity`
+- `is_known_exploited`
+- `reference_count`
+- `affected_entry_count`
+- `published_month`
+- `attack_vector`
+- `attack_complexity`
+- `privileges_required`
+- `user_interaction`
+- `cwe_id`
+
+### Latest Model Metrics
 
 ```text
-High
-Medium
-Low
+Training rows: 5,609
+Test rows: 1,870
+Accuracy: 0.9856
+Balanced Accuracy: 0.8232
+Macro F1: 0.8793
+Weighted F1: 0.9855
 ```
 
-### Features
+The dataset is highly imbalanced. In the latest run, the target distribution was:
 
-Numeric features:
-
-- CVSS base score
-- EPSS score
-- EPSS percentile
-- Known exploited flag
-- Reference count
-- Affected entry count
-- Published month
-
-Categorical features:
-
-- CVSS severity
-- Attack vector
-- Attack complexity
-- Privileges required
-- User interaction
-- CWE ID
-
-### Latest Training Output
-
-| Metric | Value |
-|---|---:|
-| Training rows | 5,609 |
-| Test rows | 1,870 |
-| Accuracy | 0.9856 |
-| Balanced accuracy | 0.8232 |
-| Macro F1 | 0.8793 |
-| Weighted F1 | 0.9855 |
-
-Target distribution:
-
-| Priority | Count |
-|---|---:|
-| Medium | 4,188 |
-| Low | 3,283 |
-| High | 8 |
-
-The dataset is highly imbalanced, with only 8 High-priority vulnerabilities in the latest run. Therefore, balanced accuracy and macro F1 are reported alongside overall accuracy.
-
-Run ML workflow:
-
-```powershell
-python .\scripts\run_ml.py
+```text
+Medium: 4,188
+Low: 3,283
+High: 8
 ```
+
+Because the High-priority class has very few examples, accuracy alone is not enough to evaluate the model. Balanced accuracy and macro F1 are reported alongside overall accuracy to provide a more honest evaluation across classes.
 
 ---
 
-## 🔍 Model Explainability with SHAP
-
-The project uses SHAP-style feature attribution to explain which features influence model predictions most strongly.
-
-Top SHAP features from the latest run:
-
-| Feature | Mean Absolute SHAP Value |
-|---|---:|
-| cvss_base_score | 0.091764 |
-| cvss_base_severity_MEDIUM | 0.040917 |
-| cvss_base_severity_HIGH | 0.039778 |
-| is_known_exploited | 0.035003 |
-| cvss_base_severity_CRITICAL | 0.031291 |
-| user_interaction_NONE | 0.026483 |
-| cwe_id_CWE-434 | 0.018896 |
-| user_interaction_REQUIRED | 0.017701 |
-| reference_count | 0.017388 |
-| attack_vector_NETWORK | 0.016585 |
-
-### Feature Importance
+## Model Feature Importance
 
 ![Feature Importance](reports/feature_importance.png)
 
-### SHAP Feature Importance
+This chart shows which input features the Random Forest model relied on most when predicting vulnerability priority levels.
 
-![SHAP Feature Importance](reports/shap_feature_importance.png)
+The most influential feature is `cvss_base_score`, which means the model heavily depends on the technical severity of a vulnerability. Other important signals include whether the CVE is known to be exploited, CVSS severity labels, CWE weakness categories, and the number of public references.
 
-Generated files:
+In practical terms, the model learned that higher-priority vulnerabilities are usually associated with stronger severity scores, known exploitation evidence, and specific weakness categories.
 
-```text
-reports/model_metrics.json
-reports/classification_report.csv
-reports/confusion_matrix.csv
-reports/feature_importance.csv
-reports/feature_importance.png
-reports/shap_feature_importance.png
-```
+### Key Feature Meanings
 
-The trained local model is saved to:
-
-```text
-models/priority_classifier.joblib
-```
-
-The model artifact is ignored by Git to keep the repository lightweight.
+- `cvss_base_score`: Technical severity score of the vulnerability.
+- `is_known_exploited`: Whether the vulnerability appears in the CISA KEV known exploited catalog.
+- `cvss_base_severity`: CVSS severity label such as Critical, High, Medium, or Low.
+- `cwe_id`: Common Weakness Enumeration category, representing the vulnerability weakness type.
+- `reference_count`: Number of external references linked to the CVE.
+- `affected_entry_count`: Number of affected vendor/product entries extracted from the CVE record.
+- `attack_vector`: Whether the vulnerability can be exploited over the network, locally, physically, or through another vector.
+- `attack_complexity`: How difficult exploitation is under expected conditions.
+- `privileges_required`: Whether exploitation requires attacker privileges.
+- `user_interaction`: Whether exploitation requires a user to take an action.
 
 ---
 
-## 📈 MLflow Experiment Tracking
+## SHAP Explainability
 
-MLflow is used to track the model experiment locally.
+![SHAP Feature Importance](reports/shap_feature_importance.png)
 
-MLflow records:
+SHAP explains how much each feature contributes to the model's predictions on average.
 
-- Model parameters
-- Model metrics
-- Classification report
-- Confusion matrix
-- Feature importance outputs
-- SHAP importance plot
-- Serialized model artifact
+The SHAP results show that `cvss_base_score`, CVSS severity, known exploitation status, user interaction, attack vector, and reference count are the strongest drivers of the model's vulnerability priority predictions.
 
-Run MLflow UI:
+This makes the model more interpretable because the prediction is not treated as a black box. Instead, the project can explain why certain vulnerabilities are prioritised higher than others.
 
-```powershell
-mlflow ui --backend-store-uri .\mlruns --port 5000
+For example:
+
+- A higher CVSS base score usually increases predicted risk.
+- A known exploited CVE is more likely to receive a higher priority.
+- Network-exploitable vulnerabilities can contribute to higher risk.
+- User interaction and privilege requirements help the model understand exploitability conditions.
+- CWE categories help the model capture recurring weakness patterns.
+
+---
+
+## MLflow Experiment Tracking
+
+MLflow is used to track model training runs, parameters, metrics, model artifacts, and output reports.
+
+The local MLflow tracking directory is:
+
+```text
+mlruns/
+```
+
+To open the MLflow UI locally:
+
+```bash
+mlflow ui --backend-store-uri ./mlruns --port 5000
 ```
 
 Then open:
@@ -491,259 +540,151 @@ Then open:
 http://localhost:5000
 ```
 
-Local MLflow tracking files are stored in:
+The current experiment is:
 
 ```text
-mlruns/
+cyber-risk-priority-classifier
 ```
 
-This directory is ignored by Git.
+MLflow outputs are kept local and are not committed to Git.
 
 ---
 
-## 🔁 Full Pipeline
+## Generated Reports
 
-The full pipeline runs ingestion, PySpark ETL, validation, dbt analytics, and inspection.
-
-Run the full pipeline:
-
-```powershell
-python .\scripts\run_pipeline.py
-```
-
-Pipeline steps:
+The project generates the following reporting artifacts:
 
 ```text
-Bronze ingestion
-→ Silver ETL
-→ Gold ETL
-→ Data Quality Validation
-→ DuckDB Analytics Database
-→ dbt Staging + Mart Models
-→ dbt Tests
-→ dbt Docs
-→ Lakehouse Inspection
+reports/data_quality_report.csv
+reports/model_metrics.json
+reports/classification_report.csv
+reports/confusion_matrix.csv
+reports/feature_importance.csv
+reports/feature_importance.png
+reports/shap_feature_importance.png
 ```
 
-Latest full pipeline result:
-
-```text
-Pipeline completed successfully.
-```
+These reports support both engineering validation and machine learning explainability.
 
 ---
 
-## ⚙️ GitHub Actions CI
+## Run the Project Locally
 
-The repository includes a GitHub Actions workflow for Python CI.
+### 1. Clone the repository
 
-The CI workflow checks:
-
-- Python setup
-- Dependency installation
-- Project package installation
-- Python source compilation
-- Package import validation
-
-Latest workflow status:
-
-```text
-Passing
-```
-
-Workflow file:
-
-```text
-.github/workflows/python-ci.yml
-```
-
----
-
-## 📁 Project Structure
-
-```text
-cyber-risk-intelligence-lakehouse/
-├── .github/
-│   └── workflows/
-│       └── python-ci.yml
-├── app/
-│   └── dashboard.py
-├── assets/
-│   ├── dashboard_overview.png
-│   ├── dashboard_risk_analysis.png
-│   └── dashboard_top_vulnerabilities.png
-├── dbt/
-│   └── cyber_risk_dbt/
-│       ├── dbt_project.yml
-│       ├── profiles.yml
-│       └── models/
-│           ├── sources.yml
-│           ├── staging/
-│           └── marts/
-├── ml/
-│   └── train_priority_model.py
-├── reports/
-│   ├── data_quality_report.csv
-│   ├── model_metrics.json
-│   ├── classification_report.csv
-│   ├── confusion_matrix.csv
-│   ├── feature_importance.csv
-│   ├── feature_importance.png
-│   └── shap_feature_importance.png
-├── scripts/
-│   ├── run_ingestion.py
-│   ├── run_pipeline.py
-│   ├── run_dbt.py
-│   ├── run_ml.py
-│   ├── build_analytics_database.py
-│   ├── inspect_lakehouse.py
-│   └── validate_lakehouse.py
-├── src/
-│   └── cyber_risk/
-│       ├── ingestion/
-│       ├── etl/
-│       └── quality/
-├── requirements.txt
-├── pyproject.toml
-└── README.md
-```
-
-Generated local folders not committed to Git:
-
-```text
-data/
-analytics/
-models/
-mlruns/
-dbt/cyber_risk_dbt/target/
-dbt/cyber_risk_dbt/logs/
-```
-
----
-
-## 🛠️ Local Setup
-
-### 1. Clone the Repository
-
-```powershell
+```bash
 git clone https://github.com/momo840505/cyber-risk-intelligence-lakehouse.git
 cd cyber-risk-intelligence-lakehouse
 ```
 
-### 2. Create Virtual Environment
+### 2. Create and activate a virtual environment
+
+```bash
+python -m venv .venv
+```
+
+On Windows PowerShell:
 
 ```powershell
-python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
 
-### 3. Install Dependencies
+### 3. Install dependencies
 
-```powershell
+```bash
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
-python -m pip install -e .
 ```
 
-### 4. Configure Hadoop on Windows
+### 4. Run the full lakehouse pipeline
 
-PySpark on Windows requires Hadoop winutils.
-
-Expected local setup:
-
-```powershell
-$env:HADOOP_HOME = "C:\hadoop"
-$env:Path = "C:\hadoop\bin;$env:Path"
+```bash
+python scripts/run_pipeline.py
 ```
 
-Check:
+### 5. Run the ML workflow
 
-```powershell
-Test-Path C:\hadoop\bin
-Test-Path C:\hadoop\bin\winutils.exe
-where.exe winutils
+```bash
+python scripts/run_ml.py
 ```
 
----
+### 6. Start the Streamlit dashboard
 
-## ▶️ How to Run
-
-### Run Full Data Pipeline
-
-```powershell
-python .\scripts\run_pipeline.py
+```bash
+python -m streamlit run app/dashboard.py
 ```
 
-### Run dbt Analytics Layer
+### 7. Start the MLflow UI
 
-```powershell
-python .\scripts\run_dbt.py
-```
-
-### Run ML Training
-
-```powershell
-python .\scripts\run_ml.py
-```
-
-### Run Dashboard
-
-```powershell
-python -m streamlit run app\dashboard.py
-```
-
-### Open MLflow UI
-
-```powershell
-mlflow ui --backend-store-uri .\mlruns --port 5000
+```bash
+mlflow ui --backend-store-uri ./mlruns --port 5000
 ```
 
 ---
 
-## 📌 Current Project Status
+## GitHub Actions CI
+
+This repository includes a GitHub Actions workflow that checks Python source files and validates that the project package can be imported.
+
+The latest workflow runs passed successfully after adding:
+
+- Pipeline runner
+- Data quality report
+- dbt analytics layer
+- ML priority classifier
+- SHAP reports
+- MLflow tracking support
+
+---
+
+## Current Project Status
 
 Completed:
 
-```text
-✅ Public cyber risk data ingestion
-✅ Bronze / Silver / Gold lakehouse
-✅ PySpark ETL
-✅ Gold analytics tables
-✅ Data quality validation
-✅ Data quality CSV report
-✅ Streamlit dashboard
-✅ Dashboard screenshots
-✅ DuckDB analytics database
-✅ dbt source models
-✅ dbt staging models
-✅ dbt mart models
-✅ dbt tests
-✅ dbt docs
-✅ Machine learning priority classifier
-✅ SHAP explainability
-✅ MLflow experiment tracking
-✅ Model metrics and plots
-✅ GitHub Actions CI
-```
+- PySpark ingestion and ETL
+- Bronze, Silver, and Gold lakehouse layers
+- CISA KEV, EPSS, and NVD CVE integration
+- Gold analytics tables
+- Data quality validation
+- CSV quality report
+- Streamlit dashboard
+- Dashboard screenshots
+- DuckDB analytics database
+- dbt sources, staging models, and mart models
+- dbt tests and docs generation
+- ML priority classifier
+- MLflow tracking
+- SHAP explainability reports
+- GitHub Actions CI
 
-Not implemented yet:
+Planned next phases:
 
-```text
-❌ FastAPI service
-❌ RAG remediation copilot
-❌ LLM evaluation
-❌ Cloud deployment
-❌ Terraform infrastructure
-❌ Production monitoring
-```
+- FastAPI risk intelligence API
+- Prediction endpoint for vulnerability priority
+- RAG-based remediation copilot
+- LLM evaluation
+- Monitoring and observability
+- Terraform infrastructure templates
+- AWS deployment architecture
 
 ---
 
-## 🧭 Roadmap
+## Limitations
 
-### Phase 4 — FastAPI Risk Intelligence API
+- The current project runs locally and has not yet been deployed to AWS.
+- Public vulnerability feeds change over time, so row counts and model outputs may vary between runs.
+- The current ML classifier is trained on a highly imbalanced target distribution, especially for the High-priority class.
+- The model currently supports portfolio-grade explainability through SHAP, but it should not be used as a production security decision system without additional validation.
+- MLflow tracking is local and not yet deployed to a remote tracking server.
+- The model predicts project-defined priority labels, not official CVSS severity labels.
 
-Planned endpoints:
+---
+
+## Future Roadmap
+
+### Phase 4: FastAPI Risk Intelligence API
+
+Planned API endpoints:
 
 ```text
 GET /health
@@ -755,62 +696,49 @@ GET /trends/monthly
 POST /predict-priority
 ```
 
-### Phase 5 — AI Remediation Copilot
+### Phase 5: RAG Remediation Copilot
 
-Planned features:
+Planned capabilities:
 
-```text
-RAG-based remediation guidance
-CVE-specific recommended actions
-Source-grounded cyber risk summaries
-LLM output safety checks
-LLM evaluation report
-```
+- Retrieve relevant CVE, CWE, KEV, and remediation context.
+- Generate concise remediation guidance.
+- Return grounded answers with source context.
+- Avoid exploit instructions and focus on defensive remediation.
 
-### Phase 6 — Cloud and Infrastructure
+### Phase 6: Cloud and Infrastructure
 
-Planned features:
+Planned capabilities:
 
-```text
-AWS S3 lakehouse storage
-Terraform infrastructure templates
-Containerised API deployment
-CloudWatch-style monitoring design
-CI/CD deployment workflow
-```
+- AWS S3 data lake architecture
+- Terraform templates
+- Containerised API deployment
+- Monitoring and logging
+- CI/CD deployment workflow
 
 ---
 
-## ⚠️ Notes and Limitations
+## Portfolio Summary
 
-- Public vulnerability datasets update frequently, so row counts and model metrics may change between runs.
-- The latest ML dataset is imbalanced, especially for the High-priority class.
-- The current ML model is a portfolio-grade explainability demonstration, not a production cyber risk decision engine.
-- Local DuckDB, MLflow, and model artifacts are intentionally ignored by Git.
-- AWS, FastAPI, RAG, Terraform, and monitoring are planned future phases, not yet implemented.
+This project demonstrates practical skills across the modern data and AI engineering stack:
+
+- Data ingestion from public APIs
+- PySpark ETL
+- Lakehouse architecture
+- Data quality validation
+- dbt analytics engineering
+- SQL marts
+- Streamlit dashboards
+- Machine learning model training
+- Model evaluation
+- SHAP explainability
+- MLflow experiment tracking
+- GitHub Actions CI
+- Security-aware data product design
 
 ---
 
-## 👤 Author
+## Author
 
-**Mo Mo**  
-Master of Data Science student  
+**Wei-Ting Mo**  
+Master of Data Science  
 GitHub: [momo840505](https://github.com/momo840505)
-
----
-
-## ⭐ Summary
-
-This repository demonstrates a modern cyber risk intelligence workflow:
-
-```text
-Public vulnerability intelligence
-→ PySpark lakehouse
-→ dbt analytics marts
-→ Data quality validation
-→ Streamlit dashboard
-→ ML priority classifier
-→ SHAP explainability
-→ MLflow experiment tracking
-→ GitHub Actions CI
-```
