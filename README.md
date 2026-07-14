@@ -3,12 +3,13 @@
 ![Python](https://img.shields.io/badge/Python-3.11%2B-blue)
 ![PySpark](https://img.shields.io/badge/PySpark-ETL-orange)
 ![Streamlit](https://img.shields.io/badge/Streamlit-Dashboard-red)
+![Data Quality](https://img.shields.io/badge/Data%20Quality-18%20PASS-success)
 ![Lakehouse](https://img.shields.io/badge/Architecture-Bronze%20%7C%20Silver%20%7C%20Gold-green)
-![Status](https://img.shields.io/badge/Status-ETL%20%2B%20Dashboard%20Completed-success)
+![Status](https://img.shields.io/badge/Status-ETL%20%2B%20Dashboard%20%2B%20Validation-success)
 
-A PySpark-based cyber risk intelligence lakehouse for collecting, cleaning, transforming, and analysing public vulnerability intelligence data.
+A PySpark-based cyber risk intelligence lakehouse for collecting, cleaning, transforming, validating, and analysing public vulnerability intelligence data.
 
-This project combines **CVE**, **CVSS**, **EPSS**, and **CISA Known Exploited Vulnerabilities** signals into analytics-ready Gold tables for vulnerability prioritisation, vendor risk analysis, CWE weakness summaries, monthly vulnerability trend monitoring, and an interactive Streamlit dashboard.
+This project combines **CVE**, **CVSS**, **EPSS**, and **CISA Known Exploited Vulnerabilities** signals into analytics-ready Gold tables for vulnerability prioritisation, vendor risk analysis, CWE weakness summaries, monthly vulnerability trend monitoring, data quality validation, and an interactive Streamlit dashboard.
 
 ---
 
@@ -16,13 +17,13 @@ This project combines **CVE**, **CVSS**, **EPSS**, and **CISA Known Exploited Vu
 
 Cybersecurity teams often need to prioritise thousands of vulnerabilities across many vendors and products. Raw vulnerability feeds are useful, but they are usually fragmented across different sources and are not immediately ready for analysis.
 
-This project builds a local data lakehouse pipeline that turns raw cybersecurity data into structured, queryable, and dashboard-ready datasets.
+This project builds a local data lakehouse pipeline that turns raw cybersecurity data into structured, validated, queryable, and dashboard-ready datasets.
 
-The pipeline follows a classic **Bronze → Silver → Gold** data architecture:
+The pipeline follows a classic **Bronze → Silver → Gold → Validation → Dashboard** architecture:
 
 ```text
-Bronze Layer  →  Silver Layer  →  Gold Layer  →  Dashboard
-Raw data         Clean data       Analytics       Visual insights
+Bronze Layer  →  Silver Layer  →  Gold Layer  →  Data Quality  →  Dashboard
+Raw data         Clean data       Analytics       Validation       Visual insights
 ```
 
 ---
@@ -35,6 +36,7 @@ Raw data         Clean data       Analytics       Visual insights
 - Build Silver tables for KEV, EPSS, and NVD data.
 - Join multiple vulnerability intelligence sources.
 - Create Gold tables for risk scoring and reporting.
+- Validate Gold table quality using automated data checks.
 - Build an interactive Streamlit dashboard for vulnerability exploration.
 - Prepare the project for future API, automation, and machine learning extensions.
 
@@ -77,12 +79,13 @@ flowchart TD
     G --> J["Monthly Trends"]
     G --> K["CWE Risk Summary"]
 
-    H --> L["Streamlit Dashboard"]
+    H --> L["Data Quality Validation"]
     I --> L
     J --> L
     K --> L
 
-    L --> M["Future API / ML / Automation"]
+    L --> M["Streamlit Dashboard"]
+    M --> N["Future API / ML / Automation"]
 ```
 
 ### Architecture Summary
@@ -101,6 +104,10 @@ Cleaned and standardised vulnerability tables
         v
 Gold Layer
 Analytics-ready risk intelligence tables
+        |
+        v
+Data Quality Validation
+Schema, completeness, range, and consistency checks
         |
         v
 Streamlit Dashboard
@@ -179,7 +186,8 @@ cyber-risk-intelligence-lakehouse/
 │
 ├── scripts/
 │   ├── inspect_lakehouse.py
-│   └── run_ingestion.py
+│   ├── run_ingestion.py
+│   └── validate_lakehouse.py
 │
 ├── src/
 │   └── cyber_risk/
@@ -200,7 +208,8 @@ cyber-risk-intelligence-lakehouse/
 │       │   └── build_gold_tables.py
 │       │
 │       └── quality/
-│           └── __init__.py
+│           ├── __init__.py
+│           └── validate_gold_tables.py
 │
 ├── .gitignore
 ├── pyproject.toml
@@ -536,6 +545,64 @@ This makes it easier to focus on vulnerabilities that are severe, likely to be e
 
 ---
 
+## ✅ Data Quality Validation
+
+This project includes automated validation checks for the Gold layer tables.
+
+Validation script:
+
+```text
+scripts/validate_lakehouse.py
+```
+
+Core validation module:
+
+```text
+src/cyber_risk/quality/validate_gold_tables.py
+```
+
+### Validation Checks
+
+The data quality validation checks include:
+
+- Gold table existence
+- Required column presence
+- Non-empty table row counts
+- Missing CVE ID checks
+- Duplicate CVE ID checks
+- CVSS score range validation
+- EPSS score range validation
+- Risk score range validation
+- Priority level value validation
+- Known exploited flag validation
+- Vendor/product summary count validation
+- Monthly trend month value validation
+- CWE missing value validation
+
+### Run Data Quality Validation
+
+After building the Gold tables, run:
+
+```powershell
+python .\scripts\validate_lakehouse.py
+```
+
+### Latest Validation Result
+
+```text
+========== Lakehouse Data Quality Report ==========
+
+PASS: 18
+WARN: 0
+FAIL: 0
+
+Data quality validation completed successfully.
+```
+
+This confirms that the Gold layer outputs passed schema, completeness, consistency, and range checks.
+
+---
+
 ## 📊 Streamlit Dashboard
 
 This project includes an interactive Streamlit dashboard for exploring the Gold layer cyber risk intelligence tables.
@@ -642,6 +709,14 @@ Rows: 331
 Columns: 7
 ```
 
+### Data Quality
+
+```text
+PASS: 18
+WARN: 0
+FAIL: 0
+```
+
 ---
 
 ## ⚙️ Tech Stack
@@ -650,6 +725,7 @@ Columns: 7
 |---|---|
 | Language | Python |
 | Data Processing | PySpark |
+| Validation | Pandas-based data quality checks |
 | Dashboard | Streamlit, Plotly |
 | Storage Format | Parquet |
 | Architecture | Bronze, Silver, Gold Lakehouse |
@@ -728,13 +804,19 @@ python -m cyber_risk.etl.build_silver_tables
 python -m cyber_risk.etl.build_gold_tables
 ```
 
-### 9. Inspect lakehouse outputs
+### 9. Validate Gold tables
+
+```powershell
+python .\scripts\validate_lakehouse.py
+```
+
+### 10. Inspect lakehouse outputs
 
 ```powershell
 python .\scripts\inspect_lakehouse.py
 ```
 
-### 10. Run the dashboard
+### 11. Run the dashboard
 
 ```powershell
 python -m streamlit run app\dashboard.py
@@ -747,6 +829,7 @@ python -m streamlit run app\dashboard.py
 ```powershell
 python -m cyber_risk.etl.build_silver_tables
 python -m cyber_risk.etl.build_gold_tables
+python .\scripts\validate_lakehouse.py
 python .\scripts\inspect_lakehouse.py
 python -m streamlit run app\dashboard.py
 ```
@@ -777,6 +860,7 @@ Based on the generated Gold tables:
 - Vendor-level aggregation helps identify products with concentrated cyber risk.
 - CWE summaries help identify common weakness categories.
 - Monthly trends show vulnerability publication patterns over time.
+- Automated validation confirms that the Gold layer has 18 passed checks, 0 warnings, and 0 failures.
 
 ---
 
@@ -790,14 +874,17 @@ Completed:
 - Silver ETL
 - Gold ETL
 - Lakehouse inspection script
+- Gold table data quality validation
 - Streamlit dashboard
-- Dashboard screenshots in README
+- Dashboard screenshots
 - GitHub repository setup
 - Professional README documentation
 
 Planned:
 
-- Data quality checks
+- One-command pipeline runner
+- GitHub Actions workflow
+- Data quality report export
 - Machine learning risk classifier
 - FastAPI query service
 - Automated scheduled ingestion
@@ -806,16 +893,29 @@ Planned:
 
 ## 🔮 Future Improvements
 
-### Data Quality
+### Pipeline Automation
 
-Add validation checks for:
+Add a single command to run ingestion, Silver ETL, Gold ETL, validation, and inspection.
 
-- Missing CVE IDs
-- Duplicate CVE records
-- Invalid CVSS score ranges
-- Invalid EPSS score ranges
-- Null critical fields
-- Unexpected schema changes
+Example future command:
+
+```powershell
+python .\scripts\run_pipeline.py
+```
+
+### GitHub Actions
+
+Add a lightweight CI workflow to check Python imports, package installation, and syntax validation on every push.
+
+### Data Quality Report Export
+
+Export validation results to a local CSV or JSON report.
+
+Example future output:
+
+```text
+reports/data_quality_report.csv
+```
 
 ### Machine Learning
 
