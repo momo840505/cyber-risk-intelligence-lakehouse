@@ -1,28 +1,48 @@
 from __future__ import annotations
 
+import csv
+import time
+from datetime import datetime, timezone
 from pathlib import Path
+from threading import Lock
 from typing import Optional
 
 import duckdb
 import joblib
 import pandas as pd
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from pydantic import BaseModel, Field
+
+from rag.remediation_copilot import generate_remediation_plan
 
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 
 ANALYTICS_DATABASE_PATH = BASE_DIR / "analytics" / "cyber_risk.duckdb"
 MODEL_PATH = BASE_DIR / "models" / "priority_classifier.joblib"
+MONITORING_DIR = BASE_DIR / "monitoring"
+API_USAGE_LOG_PATH = MONITORING_DIR / "api_usage_log.csv"
+
+LOG_LOCK = Lock()
+
+API_LOG_COLUMNS = [
+    "timestamp_utc",
+    "method",
+    "path",
+    "status_code",
+    "response_time_ms",
+    "client_host",
+]
 
 
 app = FastAPI(
     title="Cyber Risk Intelligence API",
     description=(
-        "FastAPI service for querying cyber risk lakehouse marts and "
-        "predicting vulnerability priority using the ML classifier."
+        "FastAPI service for querying cyber risk lakehouse marts, "
+        "predicting vulnerability priority, and generating RAG-based "
+        "remediation guidance."
     ),
-    version="1.0.0",
+    version="2.0.0",
 )
 
 
@@ -75,12 +95,129 @@ def load_model():
     return joblib.load(MODEL_PATH)
 
 
+def append_api_log(
+    method: str,
+    path: str,
+    status_code: int,
+    response_time_ms: float,
+    client_host: str,
+) -> None:
+    MONITORING_DIR.mkdir(parents=True, exist_ok=True)
+
+    row = {
+        "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+        "method": method,
+        "path": path,
+        "status_code": status_code,
+        "response_time_ms": round(response_time_ms, 3),
+        "client_host": client_host,
+    }
+
+    with LOG_LOCK:
+        file_exists = API_USAGE_LOG_PATH.exists()
+
+        with API_USAGE_LOG_PATH.open("a", newline="", encoding="utf-8") as file:
+            writer = csv.DictWriter(file, fieldnames=API_LOG_COLUMNS)
+
+            if not file_exists:
+                writer.writeheader()
+
+            writer.writerow(row)
+
+
+def read_api_usage_log() -> pd.DataFrame:
+    if not API_USAGE_LOG_PATH.exists():
+        return pd.DataFrame(columns=API_LOG_COLUMNS)
+
+    return pd.read_csv(API_USAGE_LOG_PATH)
+
+
+def build_metrics_payload() -> dict:
+    dataframe = read_api_usage_log()
+
+    if dataframe.empty:
+        return {
+            "total_requests": 0,
+            "error_count": 0,
+            "error_rate": 0,
+            "average_response_time_ms": 0,
+            "p95_response_time_ms": 0,
+            "requests_by_path": {},
+            "requests_by_status_code": {},
+            "last_request_utc": None,
+        }
+
+    dataframe["status_code"] = dataframe["status_code"].astype(int)
+    dataframe["response_time_ms"] = dataframe["response_time_ms"].astype(float)
+
+    total_requests = int(len(dataframe))
+    error_count = int((dataframe["status_code"] >= 400).sum())
+
+    requests_by_path = (
+        dataframe.groupby("path")
+        .size()
+        .sort_values(ascending=False)
+        .to_dict()
+    )
+
+    requests_by_status_code = (
+        dataframe.groupby("status_code")
+        .size()
+        .sort_index()
+        .to_dict()
+    )
+
+    return {
+        "total_requests": total_requests,
+        "error_count": error_count,
+        "error_rate": round(error_count / total_requests, 4),
+        "average_response_time_ms": round(
+            float(dataframe["response_time_ms"].mean()),
+            3,
+        ),
+        "p95_response_time_ms": round(
+            float(dataframe["response_time_ms"].quantile(0.95)),
+            3,
+        ),
+        "requests_by_path": {
+            str(key): int(value) for key, value in requests_by_path.items()
+        },
+        "requests_by_status_code": {
+            str(key): int(value) for key, value in requests_by_status_code.items()
+        },
+        "last_request_utc": str(dataframe["timestamp_utc"].iloc[-1]),
+    }
+
+
+@app.middleware("http")
+async def log_api_requests(request: Request, call_next):
+    start_time = time.perf_counter()
+    status_code = 500
+
+    try:
+        response = await call_next(request)
+        status_code = response.status_code
+        return response
+    finally:
+        response_time_ms = (time.perf_counter() - start_time) * 1000
+        client_host = request.client.host if request.client else "unknown"
+
+        append_api_log(
+            method=request.method,
+            path=request.url.path,
+            status_code=status_code,
+            response_time_ms=response_time_ms,
+            client_host=client_host,
+        )
+
+
 @app.get("/")
 def root() -> dict:
     return {
         "service": "Cyber Risk Intelligence API",
         "status": "running",
         "docs": "/docs",
+        "metrics": "/metrics",
     }
 
 
@@ -88,6 +225,7 @@ def root() -> dict:
 def health_check() -> dict:
     database_exists = ANALYTICS_DATABASE_PATH.exists()
     model_exists = MODEL_PATH.exists()
+    monitoring_log_exists = API_USAGE_LOG_PATH.exists()
 
     return {
         "status": "ok" if database_exists else "missing_database",
@@ -95,7 +233,14 @@ def health_check() -> dict:
         "analytics_database_exists": database_exists,
         "model_path": str(MODEL_PATH),
         "model_exists": model_exists,
+        "monitoring_log_path": str(API_USAGE_LOG_PATH),
+        "monitoring_log_exists": monitoring_log_exists,
     }
+
+
+@app.get("/metrics")
+def get_api_metrics() -> dict:
+    return build_metrics_payload()
 
 
 @app.get("/vulnerabilities/top")
@@ -266,8 +411,6 @@ def predict_priority(request: PriorityPredictionRequest) -> dict:
         }
 
     return response
-
-from rag.remediation_copilot import generate_remediation_plan
 
 
 @app.get("/remediation/{cve_id}")

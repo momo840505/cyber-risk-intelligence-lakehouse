@@ -1,0 +1,10 @@
+path,request_count,error_count,average_response_time_ms,p95_response_time_ms
+/metrics,2,0,26.268,32.153
+/cwe/risk-summary,1,0,18.806,18.806
+/docs,1,0,0.589,0.589
+/health,1,0,1.53,1.53
+/openapi.json,1,0,14.977,14.977
+/remediation/CVE-2026-48908,1,0,22.087,22.087
+/trends/monthly,1,0,18.615,18.615
+/vendors/risk-summary,1,0,18.968,18.968
+/vulnerabilities/top,1,0,22.954,22.954
