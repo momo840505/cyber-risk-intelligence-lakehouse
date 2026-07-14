@@ -40,3 +40,6 @@ mlruns/
 
 # Local model artifacts
 models/*.joblib
+
+# Runtime monitoring logs
+monitoring/api_usage_log.csv

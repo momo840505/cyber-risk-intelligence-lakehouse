@@ -1,0 +1,10 @@
+{
+  "total_requests": 10,
+  "error_count": 0,
+  "error_rate": 0.0,
+  "average_response_time_ms": 17.106,
+  "p95_response_time_ms": 28.373,
+  "unique_paths": 9,
+  "first_request_utc": "2026-07-14T19:15:29.172885+00:00",
+  "last_request_utc": "2026-07-14T19:15:50.610682+00:00"
+}
