@@ -25,3 +25,12 @@ Thumbs.db
 
 # Streamlit local config
 .streamlit/
+
+# Local analytics database
+analytics/*.duckdb
+analytics/*.duckdb.wal
+
+# dbt generated files
+dbt/**/target/
+dbt/**/logs/
+dbt/**/dbt_packages/

@@ -1,0 +1,55 @@
+﻿version: 2
+
+models:
+  - name: mart_vulnerability_priority
+    description: Analytics-ready vulnerability priority mart for cyber risk reporting.
+    columns:
+      - name: cve_id
+        description: Unique CVE identifier.
+        tests:
+          - not_null
+          - unique
+      - name: risk_score
+        description: Combined risk score from severity, exploitation probability, and known exploitation signals.
+        tests:
+          - not_null
+      - name: priority_level
+        description: Final priority label.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["Critical", "High", "Medium", "Low"]
+
+  - name: mart_vendor_risk_summary
+    description: Vendor and product-level cyber risk mart.
+    columns:
+      - name: vendor
+        tests:
+          - not_null
+      - name: product_name
+        tests:
+          - not_null
+      - name: total_vulnerabilities
+        tests:
+          - not_null
+
+  - name: mart_monthly_vulnerability_trends
+    description: Monthly vulnerability trend mart.
+    columns:
+      - name: month_label
+        tests:
+          - not_null
+      - name: total_cve_count
+        tests:
+          - not_null
+
+  - name: mart_cwe_risk_summary
+    description: CWE-level cyber risk mart.
+    columns:
+      - name: cwe_id
+        tests:
+          - not_null
+      - name: total_vulnerabilities
+        tests:
+          - not_null

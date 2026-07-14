@@ -48,9 +48,14 @@ def main() -> None:
             "Validate Gold tables",
         ),
         (
+            [python_executable, "scripts/run_dbt.py"],
+            "Build dbt analytics marts",
+        ),
+        (
             [python_executable, "scripts/inspect_lakehouse.py"],
             "Inspect lakehouse outputs",
         ),
+
     ]
 
     print("\nCyber Risk Intelligence Lakehouse Pipeline")

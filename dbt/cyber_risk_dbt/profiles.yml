@@ -1,0 +1,7 @@
+﻿cyber_risk_dbt:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: "C:/Users/momo8/Desktop/cyber-risk-intelligence-lakehouse/analytics/cyber_risk.duckdb"
+      threads: 4
