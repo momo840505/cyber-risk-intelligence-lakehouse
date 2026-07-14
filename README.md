@@ -8,9 +8,10 @@
 ![MLflow](https://img.shields.io/badge/MLflow-Experiment%20Tracking-blueviolet)
 ![SHAP](https://img.shields.io/badge/SHAP-Explainable%20AI-lightgrey)
 ![RAG](https://img.shields.io/badge/RAG-Remediation%20Copilot-purple)
+![Monitoring](https://img.shields.io/badge/Monitoring-API%20Observability-teal)
 ![CI](https://img.shields.io/badge/GitHub%20Actions-Passing-brightgreen)
 
-A full-stack cyber risk intelligence platform that ingests public vulnerability intelligence, builds a Bronze/Silver/Gold lakehouse using PySpark, transforms analytics marts with dbt and DuckDB, visualises risk through Streamlit, trains an explainable ML priority classifier with SHAP and MLflow, exposes the results through FastAPI, and provides a local RAG-based remediation copilot for defensive vulnerability response.
+A full-stack cyber risk intelligence platform that ingests public vulnerability intelligence, builds a Bronze/Silver/Gold lakehouse using PySpark, transforms analytics marts with dbt and DuckDB, visualises risk through Streamlit, trains an explainable ML priority classifier with SHAP and MLflow, exposes the results through FastAPI, provides a local RAG-based remediation copilot for defensive vulnerability response, and records API monitoring metrics for production-readiness.
 
 ---
 
@@ -33,6 +34,8 @@ It combines:
 - FastAPI backend service
 - Local RAG remediation copilot
 - Copilot evaluation report
+- API request logging and metrics endpoint
+- Monitoring reports for endpoint usage and response time
 - GitHub Actions CI
 
 The platform answers questions such as:
@@ -43,6 +46,7 @@ The platform answers questions such as:
 - How are vulnerability trends changing over time?
 - Why did the ML model classify a CVE as High, Medium, or Low priority?
 - What defensive remediation actions should be taken for a specific CVE?
+- How many API requests were made, which endpoints were used, and how fast did they respond?
 
 ---
 
@@ -65,6 +69,8 @@ flowchart LR
     G --> M[RAG Remediation Copilot]
     M --> L
     N[Local Knowledge Base] --> M
+    L --> O[API Request Logging]
+    O --> P[Monitoring Reports]
 ```
 
 ---
@@ -128,7 +134,9 @@ cyber-risk-intelligence-lakehouse/
 │   ├── feature_importance.png
 │   ├── shap_feature_importance.png
 │   ├── copilot_eval_report.csv
-│   └── copilot_eval_summary.json
+│   ├── copilot_eval_summary.json
+│   ├── api_endpoint_summary.csv
+│   └── api_monitoring_summary.json
 │
 ├── scripts/
 │   ├── run_ingestion.py
@@ -140,7 +148,11 @@ cyber-risk-intelligence-lakehouse/
 │   ├── run_ml.py
 │   ├── run_api.py
 │   ├── run_copilot.py
-│   └── evaluate_copilot.py
+│   ├── evaluate_copilot.py
+│   └── generate_monitoring_report.py
+│
+├── monitoring/
+│   └── api_usage_log.csv        # runtime log, ignored by git
 │
 ├── src/
 │   └── cyber_risk/
@@ -491,6 +503,7 @@ GET  /cwe/risk-summary
 GET  /trends/monthly
 POST /predict-priority
 GET  /remediation/{cve_id}
+GET  /metrics
 ```
 
 ### Example API Checks
@@ -529,6 +542,12 @@ Monthly trends:
 
 ```powershell
 Invoke-RestMethod "http://127.0.0.1:8000/trends/monthly"
+```
+
+API monitoring metrics:
+
+```powershell
+Invoke-RestMethod "http://127.0.0.1:8000/metrics" | ConvertTo-Json -Depth 6
 ```
 
 ---
@@ -725,6 +744,128 @@ reports/copilot_eval_summary.json
 
 ---
 
+
+## 📡 API Monitoring and Observability
+
+Phase 6 adds lightweight monitoring for the FastAPI service.
+
+The API records each request into a local runtime CSV log:
+
+```text
+monitoring/api_usage_log.csv
+```
+
+This log is intentionally ignored by Git because it changes every time the API is used.
+
+The monitoring system captures:
+
+- UTC timestamp
+- HTTP method
+- API path
+- response status code
+- response time in milliseconds
+- client host
+
+### Metrics Endpoint
+
+The API includes a metrics endpoint:
+
+```text
+GET /metrics
+```
+
+Example command:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8000/metrics |
+ConvertTo-Json -Depth 6
+```
+
+Example output:
+
+```json
+{
+  "total_requests": 9,
+  "error_count": 0,
+  "error_rate": 0.0,
+  "average_response_time_ms": 16.815,
+  "p95_response_time_ms": 28.866,
+  "requests_by_path": {
+    "/health": 1,
+    "/vulnerabilities/top": 1,
+    "/vendors/risk-summary": 1,
+    "/cwe/risk-summary": 1,
+    "/trends/monthly": 1,
+    "/remediation/CVE-2026-48908": 1,
+    "/metrics": 1
+  },
+  "requests_by_status_code": {
+    "200": 9
+  }
+}
+```
+
+### Monitoring Report Script
+
+Generate API monitoring reports:
+
+```powershell
+python .\scripts\generate_monitoring_report.py
+```
+
+This creates:
+
+```text
+reports/api_endpoint_summary.csv
+reports/api_monitoring_summary.json
+```
+
+The endpoint summary report includes:
+
+- endpoint path
+- request count
+- error count
+- average response time
+- p95 response time
+
+The monitoring summary report includes:
+
+- total requests
+- total errors
+- error rate
+- average response time
+- p95 response time
+- number of unique paths
+- first request timestamp
+- last request timestamp
+
+Latest local monitoring summary:
+
+```json
+{
+  "total_requests": 10,
+  "error_count": 0,
+  "error_rate": 0.0,
+  "average_response_time_ms": 17.106,
+  "p95_response_time_ms": 28.373,
+  "unique_paths": 9
+}
+```
+
+### Why This Matters
+
+Monitoring makes the API more production-ready because it helps answer operational questions:
+
+- Which endpoints are being used most often?
+- Are any requests failing?
+- How fast is the API responding?
+- Which endpoint has the highest latency?
+- Is the service healthy after adding ML and RAG features?
+
+This is not a full production observability stack, but it demonstrates practical API monitoring, request logging, and operational reporting.
+
+---
+
 ## ⚙️ Run the Full Pipeline
 
 Run the full local workflow:
@@ -768,6 +909,12 @@ Run copilot evaluation:
 
 ```powershell
 python .\scripts\evaluate_copilot.py
+```
+
+Generate API monitoring reports:
+
+```powershell
+python .\scripts\generate_monitoring_report.py
 ```
 
 ---
@@ -814,6 +961,15 @@ python .\scripts\evaluate_copilot.py
 - Cosine similarity
 - Context-aware remediation generation
 - Copilot evaluation report
+
+### Monitoring
+
+- FastAPI middleware
+- Request logging
+- CSV runtime logs
+- Endpoint usage summary
+- Response time metrics
+- JSON monitoring summary
 
 ### DevOps
 
@@ -882,6 +1038,12 @@ Run remediation copilot:
 python .\scripts\run_copilot.py
 ```
 
+Generate monitoring report after using the API:
+
+```powershell
+python .\scripts\generate_monitoring_report.py
+```
+
 ---
 
 ## ✅ Completed Features
@@ -909,6 +1071,11 @@ python .\scripts\run_copilot.py
 ✅ Local RAG remediation copilot
 ✅ Remediation API endpoint
 ✅ Copilot evaluation report
+✅ API request logging middleware
+✅ /metrics observability endpoint
+✅ Endpoint usage report
+✅ API monitoring summary report
+✅ Runtime monitoring log ignored by Git
 ✅ GitHub Actions CI
 ```
 
@@ -923,6 +1090,7 @@ python .\scripts\run_copilot.py
 - The remediation copilot is retrieval-based and does not replace expert security review.
 - The copilot provides defensive remediation guidance only and does not provide exploit instructions.
 - The current RAG implementation uses a local knowledge base instead of a production vector database.
+- The monitoring implementation is lightweight local logging, not a full Prometheus/Grafana production stack.
 
 ---
 
@@ -931,7 +1099,7 @@ python .\scripts\run_copilot.py
 Planned next phases:
 
 ```text
-Phase 6: Monitoring and API logging
+Phase 6: Monitoring and API logging ✅
 Phase 7: Docker deployment
 Phase 8: AWS deployment
 Phase 9: Terraform infrastructure
@@ -941,8 +1109,9 @@ Phase 10: Production CI/CD
 Possible future enhancements:
 
 - Add Docker Compose for dashboard, API, and ML services
-- Add structured API logging
+- Add structured JSON logging
 - Add Prometheus-style monitoring metrics
+- Add Grafana dashboard templates
 - Add API request validation tests
 - Add a vector database for RAG retrieval
 - Add optional LLM-based remediation narrative generation
@@ -976,8 +1145,8 @@ RAG-based remediation assistance
 ## 📌 Current Status
 
 ```text
-Status: Phase 5 Complete
-Latest completed phase: RAG Remediation Copilot
+Status: Phase 6 Complete
+Latest completed phase: API Monitoring and Metrics Reporting
 CI status: Passing
 Local pipeline: Passing
 Dashboard: Working
@@ -985,4 +1154,7 @@ API: Working locally
 ML workflow: Working locally
 RAG copilot: Working locally
 Copilot evaluation: Passing
+API monitoring: Working locally
+Metrics endpoint: Working locally
+Monitoring report: Generated
 ```
