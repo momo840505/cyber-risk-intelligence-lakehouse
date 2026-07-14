@@ -172,6 +172,11 @@ cyber-risk-intelligence-lakehouse/
 ├── app/
 │   └── dashboard.py
 │
+├── assets/
+│   ├── dashboard_overview.png
+│   ├── dashboard_risk_analysis.png
+│   └── dashboard_top_vulnerabilities.png
+│
 ├── scripts/
 │   ├── inspect_lakehouse.py
 │   └── run_ingestion.py
@@ -567,6 +572,20 @@ Known Exploited: 9
 Average Risk Score: 3.94
 ```
 
+### Dashboard Screenshots
+
+#### Executive Overview
+
+![Dashboard Overview](assets/dashboard_overview.png)
+
+#### Risk, Trend, Vendor, and CWE Analysis
+
+![Dashboard Risk Analysis](assets/dashboard_risk_analysis.png)
+
+#### Top Priority Vulnerabilities
+
+![Dashboard Top Vulnerabilities](assets/dashboard_top_vulnerabilities.png)
+
 ### Run the Dashboard
 
 After building the Gold tables, run:
@@ -772,12 +791,12 @@ Completed:
 - Gold ETL
 - Lakehouse inspection script
 - Streamlit dashboard
+- Dashboard screenshots in README
 - GitHub repository setup
 - Professional README documentation
 
 Planned:
 
-- Dashboard screenshots in README
 - Data quality checks
 - Machine learning risk classifier
 - FastAPI query service
@@ -786,18 +805,6 @@ Planned:
 ---
 
 ## 🔮 Future Improvements
-
-### Dashboard Screenshots
-
-Add screenshots under an `assets/` folder and link them in this README.
-
-Recommended screenshot files:
-
-```text
-assets/dashboard_overview.png
-assets/dashboard_risk_analysis.png
-assets/dashboard_top_vulnerabilities.png
-```
 
 ### Data Quality
 
