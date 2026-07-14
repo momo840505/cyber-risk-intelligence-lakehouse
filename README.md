@@ -4,12 +4,13 @@
 ![PySpark](https://img.shields.io/badge/PySpark-ETL-orange)
 ![Streamlit](https://img.shields.io/badge/Streamlit-Dashboard-red)
 ![Data Quality](https://img.shields.io/badge/Data%20Quality-18%20PASS-success)
+![CI](https://img.shields.io/badge/GitHub%20Actions-Python%20CI-blueviolet)
 ![Lakehouse](https://img.shields.io/badge/Architecture-Bronze%20%7C%20Silver%20%7C%20Gold-green)
 ![Status](https://img.shields.io/badge/Status-ETL%20%2B%20Dashboard%20%2B%20Validation-success)
 
 A PySpark-based cyber risk intelligence lakehouse for collecting, cleaning, transforming, validating, and analysing public vulnerability intelligence data.
 
-This project combines **CVE**, **CVSS**, **EPSS**, and **CISA Known Exploited Vulnerabilities** signals into analytics-ready Gold tables for vulnerability prioritisation, vendor risk analysis, CWE weakness summaries, monthly vulnerability trend monitoring, data quality validation, and an interactive Streamlit dashboard.
+This project combines **CVE**, **CVSS**, **EPSS**, and **CISA Known Exploited Vulnerabilities** signals into analytics-ready Gold tables for vulnerability prioritisation, vendor risk analysis, CWE weakness summaries, monthly vulnerability trend monitoring, automated data quality validation, and an interactive Streamlit dashboard.
 
 ---
 
@@ -37,8 +38,10 @@ Raw data         Clean data       Analytics       Validation       Visual insigh
 - Join multiple vulnerability intelligence sources.
 - Create Gold tables for risk scoring and reporting.
 - Validate Gold table quality using automated data checks.
+- Export a data quality report as CSV.
 - Build an interactive Streamlit dashboard for vulnerability exploration.
-- Prepare the project for future API, automation, and machine learning extensions.
+- Provide a one-command pipeline runner for the full local workflow.
+- Add GitHub Actions CI for basic package, syntax, and import checks.
 
 ---
 
@@ -103,7 +106,7 @@ Cleaned and standardised vulnerability tables
         |
         v
 Gold Layer
-Analytics-ready risk intelligence tables
+Analytics-ready cyber risk intelligence tables
         |
         v
 Data Quality Validation
@@ -176,6 +179,10 @@ Main information includes:
 ```text
 cyber-risk-intelligence-lakehouse/
 │
+├── .github/
+│   └── workflows/
+│       └── python-ci.yml
+│
 ├── app/
 │   └── dashboard.py
 │
@@ -184,9 +191,13 @@ cyber-risk-intelligence-lakehouse/
 │   ├── dashboard_risk_analysis.png
 │   └── dashboard_top_vulnerabilities.png
 │
+├── reports/
+│   └── data_quality_report.csv
+│
 ├── scripts/
 │   ├── inspect_lakehouse.py
 │   ├── run_ingestion.py
+│   ├── run_pipeline.py
 │   └── validate_lakehouse.py
 │
 ├── src/
@@ -253,12 +264,12 @@ data/silver/silver_epss
 data/silver/silver_nvd
 ```
 
-Validated Silver output:
+Latest validated Silver output:
 
 ```text
-Silver KEV: 1,631 rows
+Silver KEV: 1,638 rows
 Silver EPSS: 5,000 rows
-Silver NVD: 7,580 rows
+Silver NVD: 7,477 rows
 ```
 
 ### Silver KEV Table
@@ -348,14 +359,16 @@ data/gold/monthly_vulnerability_trends
 data/gold/cwe_risk_summary
 ```
 
-Validated Gold output:
+Latest validated Gold output:
 
 ```text
-Gold Vulnerability Priority: 7,580 rows
-Gold Vendor Risk Summary: 2,738 rows
+Gold Vulnerability Priority: 7,477 rows
+Gold Vendor Risk Summary: 2,935 rows
 Gold Monthly Trends: 2 rows
-Gold CWE Risk Summary: 331 rows
+Gold CWE Risk Summary: 317 rows
 ```
+
+> Note: The row counts can change over time because the project ingests live public vulnerability feeds, including recent NVD data and current EPSS scores.
 
 ---
 
@@ -464,11 +477,11 @@ high_count
 network_attack_vector_count
 ```
 
-Validated monthly trend output:
+Latest monthly trend output:
 
 ```text
-2026-06: 6,347 CVEs
-2026-07: 1,233 CVEs
+2026-06: 4,578 CVEs
+2026-07: 2,899 CVEs
 ```
 
 Example use cases:
@@ -532,13 +545,12 @@ Medium
 Low
 ```
 
-Validated priority distribution:
+Latest priority distribution:
 
 ```text
-Critical: 5
-High: 6
-Medium: 4,170
-Low: 3,399
+High: 8
+Medium: 4,178
+Low: 3,291
 ```
 
 This makes it easier to focus on vulnerabilities that are severe, likely to be exploited, or already known to be exploited.
@@ -559,6 +571,12 @@ Core validation module:
 
 ```text
 src/cyber_risk/quality/validate_gold_tables.py
+```
+
+Generated report:
+
+```text
+reports/data_quality_report.csv
 ```
 
 ### Validation Checks
@@ -590,13 +608,9 @@ python .\scripts\validate_lakehouse.py
 ### Latest Validation Result
 
 ```text
-========== Lakehouse Data Quality Report ==========
-
 PASS: 18
 WARN: 0
 FAIL: 0
-
-Data quality validation completed successfully.
 ```
 
 This confirms that the Gold layer outputs passed schema, completeness, consistency, and range checks.
@@ -628,17 +642,6 @@ data/gold/cwe_risk_summary
 - Sidebar filters for priority level, attack vector, vendor keyword, known exploited status, and minimum risk score
 - CSV download for top priority vulnerabilities
 
-### Dashboard Preview
-
-```text
-Executive Summary
-Total CVEs: 7,580
-Critical: 5
-High: 6
-Known Exploited: 9
-Average Risk Score: 3.94
-```
-
 ### Dashboard Screenshots
 
 #### Executive Overview
@@ -669,15 +672,58 @@ http://localhost:8501
 
 ---
 
-## ✅ Validated Pipeline Output
+## 🔁 One-Command Pipeline Runner
+
+The project includes a one-command pipeline runner that executes the full local workflow:
+
+```text
+Ingestion → Silver ETL → Gold ETL → Data Quality Validation → Lakehouse Inspection
+```
+
+Run:
+
+```powershell
+python .\scripts\run_pipeline.py
+```
+
+This is useful for rebuilding the complete local lakehouse workflow from a single command.
+
+---
+
+## ⚙️ Continuous Integration
+
+This repository includes a GitHub Actions workflow:
+
+```text
+.github/workflows/python-ci.yml
+```
+
+The workflow checks that:
+
+- Python dependencies can be installed
+- the project package can be installed
+- source files compile successfully
+- the main package can be imported
+
+---
+
+## ✅ Latest Validated Pipeline Output
 
 The lakehouse pipeline has been validated locally.
+
+### Bronze Ingestion
+
+```text
+Downloaded KEV catalog: 1,638 records
+Downloaded EPSS records: 5,000
+Downloaded NVD CVE records: 7,477
+```
 
 ### Silver Tables
 
 ```text
 Silver KEV
-Rows: 1,631
+Rows: 1,638
 Columns: 13
 
 Silver EPSS
@@ -685,7 +731,7 @@ Rows: 5,000
 Columns: 6
 
 Silver NVD
-Rows: 7,580
+Rows: 7,477
 Columns: 26
 ```
 
@@ -693,11 +739,11 @@ Columns: 26
 
 ```text
 Gold Vulnerability Priority
-Rows: 7,580
+Rows: 7,477
 Columns: 33
 
 Gold Vendor Risk Summary
-Rows: 2,738
+Rows: 2,935
 Columns: 9
 
 Gold Monthly Trends
@@ -705,7 +751,7 @@ Rows: 2
 Columns: 9
 
 Gold CWE Risk Summary
-Rows: 331
+Rows: 317
 Columns: 7
 ```
 
@@ -730,6 +776,7 @@ FAIL: 0
 | Storage Format | Parquet |
 | Architecture | Bronze, Silver, Gold Lakehouse |
 | Data Sources | CISA KEV, FIRST EPSS, NVD CVE data |
+| CI/CD | GitHub Actions |
 | Development | Git, GitHub, Virtual Environment |
 | Planned API | FastAPI |
 | Planned ML | scikit-learn, XGBoost, SHAP, MLflow |
@@ -786,39 +833,20 @@ Expected output:
 C:\hadoop\bin\winutils.exe
 ```
 
-### 6. Run data ingestion
+### 6. Run the full pipeline
+
+```powershell
+python .\scripts\run_pipeline.py
+```
+
+### 7. Or run each step manually
 
 ```powershell
 python .\scripts\run_ingestion.py
-```
-
-### 7. Build Silver tables
-
-```powershell
 python -m cyber_risk.etl.build_silver_tables
-```
-
-### 8. Build Gold tables
-
-```powershell
 python -m cyber_risk.etl.build_gold_tables
-```
-
-### 9. Validate Gold tables
-
-```powershell
 python .\scripts\validate_lakehouse.py
-```
-
-### 10. Inspect lakehouse outputs
-
-```powershell
 python .\scripts\inspect_lakehouse.py
-```
-
-### 11. Run the dashboard
-
-```powershell
 python -m streamlit run app\dashboard.py
 ```
 
@@ -827,16 +855,16 @@ python -m streamlit run app\dashboard.py
 ## 🧪 Example Commands Used During Validation
 
 ```powershell
-python -m cyber_risk.etl.build_silver_tables
-python -m cyber_risk.etl.build_gold_tables
+python .\scripts\run_pipeline.py
 python .\scripts\validate_lakehouse.py
-python .\scripts\inspect_lakehouse.py
+python -m compileall src scripts app
 python -m streamlit run app\dashboard.py
 ```
 
 Expected folders after successful execution:
 
 ```text
+data/bronze/
 data/silver/silver_kev
 data/silver/silver_epss
 data/silver/silver_nvd
@@ -845,17 +873,19 @@ data/gold/vulnerability_priority
 data/gold/vendor_risk_summary
 data/gold/monthly_vulnerability_trends
 data/gold/cwe_risk_summary
+
+reports/data_quality_report.csv
 ```
 
 ---
 
 ## 📈 Example Insights
 
-Based on the generated Gold tables:
+Based on the latest generated Gold tables:
 
-- The lakehouse contains 7,580 cleaned vulnerability records.
+- The lakehouse contains 7,477 cleaned vulnerability records.
 - Most vulnerabilities are classified as Medium or Low priority.
-- A small number of vulnerabilities are classified as Critical or High priority.
+- A small number of vulnerabilities are classified as High priority.
 - Known exploited vulnerabilities can be separated from general CVE records.
 - Vendor-level aggregation helps identify products with concentrated cyber risk.
 - CWE summaries help identify common weakness categories.
@@ -873,48 +903,36 @@ Completed:
 - PySpark session setup
 - Silver ETL
 - Gold ETL
+- One-command pipeline runner
 - Lakehouse inspection script
 - Gold table data quality validation
+- Data quality report export
 - Streamlit dashboard
 - Dashboard screenshots
+- GitHub Actions CI workflow
 - GitHub repository setup
 - Professional README documentation
 
 Planned:
 
-- One-command pipeline runner
-- GitHub Actions workflow
-- Data quality report export
-- Machine learning risk classifier
 - FastAPI query service
+- Machine learning risk classifier
 - Automated scheduled ingestion
+- Data quality trend history
 
 ---
 
 ## 🔮 Future Improvements
 
-### Pipeline Automation
+### API Layer
 
-Add a single command to run ingestion, Silver ETL, Gold ETL, validation, and inspection.
-
-Example future command:
-
-```powershell
-python .\scripts\run_pipeline.py
-```
-
-### GitHub Actions
-
-Add a lightweight CI workflow to check Python imports, package installation, and syntax validation on every push.
-
-### Data Quality Report Export
-
-Export validation results to a local CSV or JSON report.
-
-Example future output:
+Add FastAPI endpoints such as:
 
 ```text
-reports/data_quality_report.csv
+/api/vulnerabilities/top
+/api/vendors/risk-summary
+/api/cwe/risk-summary
+/api/trends/monthly
 ```
 
 ### Machine Learning
@@ -928,15 +946,14 @@ Add a model to classify vulnerability priority using:
 - Vendor/product information
 - Known exploitation status
 
-### API Layer
+### Data Quality History
 
-Add FastAPI endpoints such as:
+Save validation reports over time to monitor whether data quality changes after new ingestions.
+
+Example future output:
 
 ```text
-/api/vulnerabilities/top
-/api/vendors/risk-summary
-/api/cwe/risk-summary
-/api/trends/monthly
+reports/history/data_quality_report_YYYYMMDD.csv
 ```
 
 ### Automation

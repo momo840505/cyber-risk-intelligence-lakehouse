@@ -1,7 +1,12 @@
-.venv/
+# Python cache
 __pycache__/
 *.pyc
+.pytest_cache/
 
+# Virtual environment
+.venv/
+
+# Local data lakehouse outputs
 data/bronze/
 data/silver/
 data/gold/
@@ -10,7 +15,13 @@ data/gold/
 .mlflow/
 mlruns/
 
+# OS files
 .DS_Store
 .vscode/
+Thumbs.db
+
 # Python package metadata
 *.egg-info/
+
+# Streamlit local config
+.streamlit/

@@ -1,0 +1,19 @@
+status,check_name,message
+PASS,vulnerability_priority row count,"Table contains 7,477 rows."
+PASS,vulnerability_priority required columns,All required columns are present.
+PASS,vulnerability_priority missing CVE IDs,No missing cve_id values found.
+PASS,vulnerability_priority duplicate CVE IDs,No duplicate cve_id values found.
+PASS,CVSS score range,All non-null CVSS scores are between 0 and 10.
+PASS,EPSS score range,All non-null EPSS scores are between 0 and 1.
+PASS,Risk score range,All non-null risk scores are between 0 and 12.
+PASS,Priority level values,Priority levels are valid.
+PASS,Known exploited flag values,Known exploited values are valid 0/1 flags.
+PASS,vendor_risk_summary row count,"Table contains 2,935 rows."
+PASS,vendor_risk_summary required columns,All required columns are present.
+PASS,Vendor total vulnerability count,All vendor/product rows have positive vulnerability counts.
+PASS,monthly_vulnerability_trends row count,Table contains 2 rows.
+PASS,monthly_vulnerability_trends required columns,All required columns are present.
+PASS,Monthly trend month values,All month values are between 1 and 12.
+PASS,cwe_risk_summary row count,Table contains 317 rows.
+PASS,cwe_risk_summary required columns,All required columns are present.
+PASS,CWE missing values,No missing cwe_id values found.

@@ -6,6 +6,8 @@ import pandas as pd
 
 BASE_DIR = Path(__file__).resolve().parents[3]
 GOLD_DIR = BASE_DIR / "data" / "gold"
+REPORTS_DIR = BASE_DIR / "reports"
+REPORT_PATH = REPORTS_DIR / "data_quality_report.csv"
 
 
 class ValidationResult:
@@ -13,6 +15,13 @@ class ValidationResult:
         self.status = status
         self.check_name = check_name
         self.message = message
+
+    def to_dict(self) -> dict:
+        return {
+            "status": self.status,
+            "check_name": self.check_name,
+            "message": self.message,
+        }
 
 
 def pass_check(check_name: str, message: str) -> ValidationResult:
@@ -373,6 +382,16 @@ def print_results(results: List[ValidationResult]) -> None:
     print(f"PASS: {pass_count}")
     print(f"WARN: {warn_count}")
     print(f"FAIL: {fail_count}")
+
+    REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+    report_dataframe = pd.DataFrame(
+        [result.to_dict() for result in results]
+    )
+
+    report_dataframe.to_csv(REPORT_PATH, index=False)
+
+    print(f"\nReport written to: {REPORT_PATH}")
+
 
     if fail_count == 0:
         print("\nData quality validation completed successfully.")
