@@ -1,0 +1,13 @@
+{
+  "training_rows": 5609,
+  "test_rows": 1870,
+  "accuracy": 0.9856,
+  "balanced_accuracy": 0.8232,
+  "macro_f1": 0.8793,
+  "weighted_f1": 0.9855,
+  "classes": [
+    "High",
+    "Low",
+    "Medium"
+  ]
+}

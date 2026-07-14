@@ -34,3 +34,9 @@ analytics/*.duckdb.wal
 dbt/**/target/
 dbt/**/logs/
 dbt/**/dbt_packages/
+
+# MLflow local tracking
+mlruns/
+
+# Local model artifacts
+models/*.joblib
