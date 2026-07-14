@@ -2,26 +2,27 @@
 
 ![Python](https://img.shields.io/badge/Python-3.11%2B-blue)
 ![PySpark](https://img.shields.io/badge/PySpark-ETL-orange)
+![Streamlit](https://img.shields.io/badge/Streamlit-Dashboard-red)
 ![Lakehouse](https://img.shields.io/badge/Architecture-Bronze%20%7C%20Silver%20%7C%20Gold-green)
-![Status](https://img.shields.io/badge/Status-ETL%20Pipeline%20Completed-success)
+![Status](https://img.shields.io/badge/Status-ETL%20%2B%20Dashboard%20Completed-success)
 
 A PySpark-based cyber risk intelligence lakehouse for collecting, cleaning, transforming, and analysing public vulnerability intelligence data.
 
-This project combines **CVE**, **CVSS**, **EPSS**, and **CISA Known Exploited Vulnerabilities** signals into analytics-ready Gold tables for vulnerability prioritisation, vendor risk analysis, CWE weakness summaries, and monthly vulnerability trend monitoring.
+This project combines **CVE**, **CVSS**, **EPSS**, and **CISA Known Exploited Vulnerabilities** signals into analytics-ready Gold tables for vulnerability prioritisation, vendor risk analysis, CWE weakness summaries, monthly vulnerability trend monitoring, and an interactive Streamlit dashboard.
 
 ---
 
 ## 📌 Project Overview
 
-Cybersecurity teams often need to prioritise thousands of vulnerabilities across many products and vendors. Raw vulnerability feeds are useful, but they are usually fragmented across different sources.
+Cybersecurity teams often need to prioritise thousands of vulnerabilities across many vendors and products. Raw vulnerability feeds are useful, but they are usually fragmented across different sources and are not immediately ready for analysis.
 
-This project builds a local data lakehouse pipeline that turns raw cybersecurity data into structured, queryable, and analytics-ready datasets.
+This project builds a local data lakehouse pipeline that turns raw cybersecurity data into structured, queryable, and dashboard-ready datasets.
 
 The pipeline follows a classic **Bronze → Silver → Gold** data architecture:
 
 ```text
-Bronze Layer  →  Silver Layer  →  Gold Layer
-Raw data         Clean data       Analytics-ready risk intelligence
+Bronze Layer  →  Silver Layer  →  Gold Layer  →  Dashboard
+Raw data         Clean data       Analytics       Visual insights
 ```
 
 ---
@@ -33,8 +34,9 @@ Raw data         Clean data       Analytics-ready risk intelligence
 - Clean and standardise vulnerability data with PySpark.
 - Build Silver tables for KEV, EPSS, and NVD data.
 - Join multiple vulnerability intelligence sources.
-- Create Gold tables for risk scoring, reporting, and dashboard-ready analytics.
-- Prepare the project for future Streamlit, FastAPI, and machine learning extensions.
+- Create Gold tables for risk scoring and reporting.
+- Build an interactive Streamlit dashboard for vulnerability exploration.
+- Prepare the project for future API, automation, and machine learning extensions.
 
 ---
 
@@ -42,8 +44,7 @@ Raw data         Clean data       Analytics-ready risk intelligence
 
 Not all vulnerabilities should be prioritised in the same way.
 
-A vulnerability may have a high CVSS score, but it may not be likely to be exploited.  
-Another vulnerability may have a lower severity score, but it may already be actively exploited in the real world.
+A vulnerability may have a high CVSS score, but it may not be likely to be exploited. Another vulnerability may have a lower severity score, but it may already be actively exploited in the real world.
 
 This project combines multiple risk signals:
 
@@ -52,7 +53,7 @@ This project combines multiple risk signals:
 - **CISA KEV**: known real-world exploitation
 - **NVD metadata**: vendor, product, CWE, attack vector, and publication information
 
-By combining these signals, the project helps create a more practical vulnerability prioritisation workflow.
+By combining these signals, the project supports a more practical vulnerability prioritisation workflow.
 
 ---
 
@@ -76,10 +77,12 @@ flowchart TD
     G --> J["Monthly Trends"]
     G --> K["CWE Risk Summary"]
 
-    H --> L["Future Dashboard / API / ML"]
+    H --> L["Streamlit Dashboard"]
     I --> L
     J --> L
     K --> L
+
+    L --> M["Future API / ML / Automation"]
 ```
 
 ### Architecture Summary
@@ -100,7 +103,8 @@ Gold Layer
 Analytics-ready risk intelligence tables
         |
         v
-Future Dashboard / API / Machine Learning
+Streamlit Dashboard
+Interactive cyber risk exploration
 ```
 
 ---
@@ -164,6 +168,9 @@ Main information includes:
 
 ```text
 cyber-risk-intelligence-lakehouse/
+│
+├── app/
+│   └── dashboard.py
 │
 ├── scripts/
 │   ├── inspect_lakehouse.py
@@ -524,6 +531,58 @@ This makes it easier to focus on vulnerabilities that are severe, likely to be e
 
 ---
 
+## 📊 Streamlit Dashboard
+
+This project includes an interactive Streamlit dashboard for exploring the Gold layer cyber risk intelligence tables.
+
+The dashboard reads from:
+
+```text
+data/gold/vulnerability_priority
+data/gold/vendor_risk_summary
+data/gold/monthly_vulnerability_trends
+data/gold/cwe_risk_summary
+```
+
+### Dashboard Features
+
+- Executive KPI cards for total CVEs, Critical vulnerabilities, High vulnerabilities, known exploited vulnerabilities, and average risk score
+- Priority distribution chart
+- CVSS severity distribution chart
+- Monthly vulnerability trend chart
+- Top vendor and product risk ranking
+- CWE weakness risk analysis
+- Top priority vulnerability explorer
+- Sidebar filters for priority level, attack vector, vendor keyword, known exploited status, and minimum risk score
+- CSV download for top priority vulnerabilities
+
+### Dashboard Preview
+
+```text
+Executive Summary
+Total CVEs: 7,580
+Critical: 5
+High: 6
+Known Exploited: 9
+Average Risk Score: 3.94
+```
+
+### Run the Dashboard
+
+After building the Gold tables, run:
+
+```powershell
+python -m streamlit run app\dashboard.py
+```
+
+The dashboard opens locally at:
+
+```text
+http://localhost:8501
+```
+
+---
+
 ## ✅ Validated Pipeline Output
 
 The lakehouse pipeline has been validated locally.
@@ -572,11 +631,11 @@ Columns: 7
 |---|---|
 | Language | Python |
 | Data Processing | PySpark |
+| Dashboard | Streamlit, Plotly |
 | Storage Format | Parquet |
 | Architecture | Bronze, Silver, Gold Lakehouse |
 | Data Sources | CISA KEV, FIRST EPSS, NVD CVE data |
 | Development | Git, GitHub, Virtual Environment |
-| Planned Dashboard | Streamlit, Plotly |
 | Planned API | FastAPI |
 | Planned ML | scikit-learn, XGBoost, SHAP, MLflow |
 
@@ -656,6 +715,12 @@ python -m cyber_risk.etl.build_gold_tables
 python .\scripts\inspect_lakehouse.py
 ```
 
+### 10. Run the dashboard
+
+```powershell
+python -m streamlit run app\dashboard.py
+```
+
 ---
 
 ## 🧪 Example Commands Used During Validation
@@ -664,6 +729,7 @@ python .\scripts\inspect_lakehouse.py
 python -m cyber_risk.etl.build_silver_tables
 python -m cyber_risk.etl.build_gold_tables
 python .\scripts\inspect_lakehouse.py
+python -m streamlit run app\dashboard.py
 ```
 
 Expected folders after successful execution:
@@ -685,7 +751,7 @@ data/gold/cwe_risk_summary
 
 Based on the generated Gold tables:
 
-- The lakehouse contains more than 7,500 cleaned vulnerability records.
+- The lakehouse contains 7,580 cleaned vulnerability records.
 - Most vulnerabilities are classified as Medium or Low priority.
 - A small number of vulnerabilities are classified as Critical or High priority.
 - Known exploited vulnerabilities can be separated from general CVE records.
@@ -705,13 +771,13 @@ Completed:
 - Silver ETL
 - Gold ETL
 - Lakehouse inspection script
+- Streamlit dashboard
 - GitHub repository setup
 - Professional README documentation
 
 Planned:
 
-- Streamlit dashboard
-- Interactive charts
+- Dashboard screenshots in README
 - Data quality checks
 - Machine learning risk classifier
 - FastAPI query service
@@ -721,18 +787,17 @@ Planned:
 
 ## 🔮 Future Improvements
 
-### Dashboard
+### Dashboard Screenshots
 
-Add a Streamlit dashboard for interactive vulnerability exploration.
+Add screenshots under an `assets/` folder and link them in this README.
 
-Planned dashboard pages:
+Recommended screenshot files:
 
-- Executive overview
-- Top priority vulnerabilities
-- Vendor risk ranking
-- CWE risk analysis
-- Monthly vulnerability trends
-- Known exploited vulnerability explorer
+```text
+assets/dashboard_overview.png
+assets/dashboard_risk_analysis.png
+assets/dashboard_top_vulnerabilities.png
+```
 
 ### Data Quality
 
