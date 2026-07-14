@@ -1,0 +1,59 @@
+﻿version: 2
+
+sources:
+  - name: gold
+    schema: main
+    description: Raw Gold tables loaded from the PySpark lakehouse into DuckDB.
+    tables:
+      - name: raw_vulnerability_priority
+        description: Raw vulnerability priority table from the Gold layer.
+        columns:
+          - name: cve_id
+            tests:
+              - not_null
+              - unique
+          - name: risk_score
+            tests:
+              - not_null
+          - name: priority_level
+            tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values: ["Critical", "High", "Medium", "Low"]
+
+      - name: raw_vendor_risk_summary
+        description: Raw vendor and product risk summary table from the Gold layer.
+        columns:
+          - name: vendor
+            tests:
+              - not_null
+          - name: product_name
+            tests:
+              - not_null
+          - name: total_vulnerabilities
+            tests:
+              - not_null
+
+      - name: raw_monthly_vulnerability_trends
+        description: Raw monthly vulnerability trend table from the Gold layer.
+        columns:
+          - name: published_year
+            tests:
+              - not_null
+          - name: published_month
+            tests:
+              - not_null
+          - name: total_cve_count
+            tests:
+              - not_null
+
+      - name: raw_cwe_risk_summary
+        description: Raw CWE risk summary table from the Gold layer.
+        columns:
+          - name: cwe_id
+            tests:
+              - not_null
+          - name: total_vulnerabilities
+            tests:
+              - not_null
