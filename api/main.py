@@ -266,3 +266,18 @@ def predict_priority(request: PriorityPredictionRequest) -> dict:
         }
 
     return response
+
+from rag.remediation_copilot import generate_remediation_plan
+
+
+@app.get("/remediation/{cve_id}")
+def get_remediation_plan(cve_id: str) -> dict:
+    plan = generate_remediation_plan(cve_id)
+
+    if not plan.get("found"):
+        raise HTTPException(
+            status_code=404,
+            detail=f"CVE not found in analytics mart: {cve_id}",
+        )
+
+    return plan
