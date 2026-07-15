@@ -2,19 +2,22 @@
 
 [![Python CI](https://github.com/momo840505/cyber-risk-intelligence-lakehouse/actions/workflows/ci.yml/badge.svg)](https://github.com/momo840505/cyber-risk-intelligence-lakehouse/actions)
 [![Docker Build](https://github.com/momo840505/cyber-risk-intelligence-lakehouse/actions/workflows/docker-build.yml/badge.svg)](https://github.com/momo840505/cyber-risk-intelligence-lakehouse/actions)
+[![Terraform Validate](https://github.com/momo840505/cyber-risk-intelligence-lakehouse/actions/workflows/terraform-validate.yml/badge.svg)](https://github.com/momo840505/cyber-risk-intelligence-lakehouse/actions)
 ![Python](https://img.shields.io/badge/Python-3.11-blue)
 ![PySpark](https://img.shields.io/badge/PySpark-Lakehouse-orange)
 ![dbt](https://img.shields.io/badge/dbt-Analytics-red)
 ![FastAPI](https://img.shields.io/badge/FastAPI-API-green)
 ![Docker](https://img.shields.io/badge/Docker-Ready-blue)
+![Terraform](https://img.shields.io/badge/Terraform-IaC-purple)
+![AWS](https://img.shields.io/badge/AWS-Architecture-orange)
 ![MLflow](https://img.shields.io/badge/MLflow-Tracking-lightgrey)
 ![SHAP](https://img.shields.io/badge/SHAP-Explainability-purple)
 
 ## Overview
 
-This project is an end-to-end **Cyber Risk Intelligence Platform** that combines data engineering, analytics engineering, machine learning, API development, RAG-based remediation guidance, monitoring, and Docker deployment readiness.
+This project is an end-to-end **Cyber Risk Intelligence Platform** that combines data engineering, analytics engineering, machine learning, API development, RAG-based remediation guidance, monitoring, Docker deployment readiness, and AWS infrastructure-as-code design.
 
-It ingests public cyber risk data, builds a PySpark lakehouse, transforms analytics marts with dbt and DuckDB, trains a vulnerability priority classifier, explains model behaviour with SHAP, exposes risk intelligence through FastAPI, generates defensive remediation plans using local RAG retrieval, tracks API usage through monitoring logs, and provides Docker deployment support.
+It ingests public cyber risk data, builds a PySpark lakehouse, transforms analytics marts with dbt and DuckDB, trains a vulnerability priority classifier, explains model behaviour with SHAP, exposes risk intelligence through FastAPI, generates defensive remediation plans using local RAG retrieval, tracks API usage through monitoring logs, provides Docker deployment support, and includes a Terraform AWS architecture template.
 
 The project is designed as a portfolio-ready platform for roles such as:
 
@@ -23,6 +26,7 @@ The project is designed as a portfolio-ready platform for roles such as:
 - Data Scientist
 - Machine Learning Engineer
 - AI Engineer
+- Cloud Data Engineer
 - Security Data Analyst
 
 ---
@@ -37,6 +41,7 @@ The project is designed as a portfolio-ready platform for roles such as:
 ✅ Phase 5: RAG Remediation Copilot
 ✅ Phase 6: API Monitoring and Observability
 ✅ Phase 7: Docker Deployment Readiness
+✅ Phase 8: Terraform + AWS Architecture Template
 ```
 
 ---
@@ -71,6 +76,17 @@ flowchart TD
     Q --> R[Docker Compose Deployment]
     Q --> S[API Smoke Test]
     Q --> T[Docker Build CI]
+
+    Q --> U[AWS ECR]
+    U --> V[AWS ECS Fargate]
+    V --> W[Application Load Balancer]
+    V --> X[CloudWatch Logs and Dashboard]
+    Y[S3 Lakehouse Storage Template] --> V
+    Z[Terraform IaC] --> U
+    Z --> V
+    Z --> W
+    Z --> X
+    Z --> Y
 ```
 
 ---
@@ -79,9 +95,14 @@ flowchart TD
 
 The platform uses public cyber risk intelligence sources:
 
-- **CISA Known Exploited Vulnerabilities (KEV)**: identifies vulnerabilities with evidence of active exploitation.
-- **EPSS vulnerability scoring data**: enriches vulnerabilities with exploit probability signals when available.
-- **NVD CVE data**: provides CVE metadata, CVSS severity, CWE information, vendor/product information, and vulnerability descriptions.
+- **CISA Known Exploited Vulnerabilities (KEV)**  
+  Used to identify vulnerabilities with evidence of active exploitation.
+
+- **EPSS vulnerability scoring data**  
+  Used to enrich vulnerabilities with exploit probability signals when available.
+
+- **NVD CVE data**  
+  Used for CVE metadata, CVSS severity, CWE information, affected vendor/product information, and vulnerability descriptions.
 
 ---
 
@@ -91,50 +112,95 @@ The platform uses public cyber risk intelligence sources:
 cyber-risk-intelligence-lakehouse/
 ├── api/
 │   └── main.py
+│
 ├── app/
 │   └── dashboard.py
+│
 ├── assets/
 │   ├── dashboard_overview.png
 │   ├── dashboard_risk_analysis.png
 │   └── dashboard_top_vulnerabilities.png
+│
 ├── data/
 │   ├── bronze/
 │   ├── silver/
 │   └── gold/
+│
 ├── dbt/
 │   └── cyber_risk_dbt/
+│       ├── dbt_project.yml
+│       └── models/
+│           ├── staging/
+│           └── marts/
+│
+├── infrastructure/
+│   └── aws/
+│       ├── README.md
+│       ├── versions.tf
+│       ├── variables.tf
+│       ├── main.tf
+│       ├── networking.tf
+│       ├── security_groups.tf
+│       ├── storage.tf
+│       ├── ecr.tf
+│       ├── iam.tf
+│       ├── ecs.tf
+│       ├── monitoring.tf
+│       ├── outputs.tf
+│       └── terraform.tfvars.example
+│
 ├── ml/
 │   └── train_priority_model.py
+│
 ├── models/
 │   └── priority_classifier.joblib
+│
 ├── monitoring/
 │   └── api_usage_log.csv
+│
 ├── rag/
 │   ├── remediation_copilot.py
 │   └── knowledge_base/
+│       ├── cisa_kev_remediation.md
+│       ├── cvss_prioritisation.md
+│       ├── cwe_remediation.md
+│       ├── emergency_response.md
+│       └── vulnerability_management.md
+│
 ├── reports/
 │   ├── data_quality_report.csv
 │   ├── model_metrics.json
+│   ├── classification_report.csv
+│   ├── confusion_matrix.csv
+│   ├── feature_importance.csv
 │   ├── feature_importance.png
 │   ├── shap_feature_importance.png
 │   ├── copilot_eval_report.csv
 │   ├── copilot_eval_summary.json
 │   ├── api_endpoint_summary.csv
 │   └── api_monitoring_summary.json
+│
 ├── scripts/
 │   ├── run_pipeline.py
+│   ├── run_ingestion.py
+│   ├── validate_lakehouse.py
+│   ├── inspect_lakehouse.py
+│   ├── build_analytics_database.py
 │   ├── run_dbt.py
 │   ├── run_ml.py
 │   ├── run_api.py
+│   ├── run_copilot.py
 │   ├── evaluate_copilot.py
 │   ├── generate_monitoring_report.py
-│   └── smoke_test_api.py
-├── src/
-│   └── cyber_risk/
+│   ├── smoke_test_api.py
+│   └── validate_terraform_template.py
+│
 ├── .github/
 │   └── workflows/
 │       ├── ci.yml
-│       └── docker-build.yml
+│       ├── docker-build.yml
+│       └── terraform-validate.yml
+│
 ├── Dockerfile
 ├── docker-compose.yml
 ├── requirements.txt
@@ -150,11 +216,19 @@ cyber-risk-intelligence-lakehouse/
 
 ### Bronze Layer
 
-The Bronze layer stores raw ingested cyber risk data from public sources, including CISA KEV, EPSS, and NVD CVE records.
+The Bronze layer stores raw ingested cyber risk data from public sources.
+
+Typical inputs:
+
+- CISA KEV records
+- EPSS vulnerability scoring data
+- NVD CVE records
 
 ### Silver Layer
 
-The Silver layer cleans and normalises records for analytics:
+The Silver layer cleans, normalises, and prepares records for analytics.
+
+Typical transformations:
 
 - Standardised CVE IDs
 - Normalised CVSS fields
@@ -165,7 +239,9 @@ The Silver layer cleans and normalises records for analytics:
 
 ### Gold Layer
 
-The Gold layer produces analytics-ready datasets:
+The Gold layer produces analytics-ready datasets.
+
+Gold outputs include:
 
 - `vulnerability_priority`
 - `vendor_risk_summary`
@@ -174,25 +250,9 @@ The Gold layer produces analytics-ready datasets:
 
 ---
 
-## Risk Scoring Logic
-
-The project uses an explainable risk scoring approach that combines:
-
-- CVSS base score
-- Known exploited vulnerability status
-- EPSS score when available
-- Attack vector
-- Weakness type
-- Reference count
-- Affected product count
-
-The goal is to produce both a risk score and an explainable prioritisation output for security stakeholders.
-
----
-
 ## Data Quality Validation
 
-The project includes automated validation for Gold lakehouse outputs.
+The project includes automated validation for the Gold lakehouse outputs.
 
 Validation checks include:
 
@@ -226,6 +286,8 @@ Data quality validation completed successfully.
 ## dbt Analytics Layer
 
 The dbt layer builds staging and mart models on top of a DuckDB analytics database.
+
+### dbt Models
 
 Staging models:
 
@@ -265,7 +327,11 @@ dbt docs serve
 
 ## Machine Learning Priority Classifier
 
-The ML component trains a classifier that predicts vulnerability priority level:
+The ML component trains a classifier that predicts vulnerability priority level.
+
+### Target
+
+The model predicts:
 
 ```text
 Low
@@ -273,7 +339,9 @@ Medium
 High
 ```
 
-Example features:
+### Features
+
+Example features include:
 
 - `cvss_base_score`
 - `epss_score`
@@ -289,7 +357,7 @@ Example features:
 - `user_interaction`
 - `cwe_id`
 
-Current model metrics:
+### Current Model Metrics
 
 ```json
 {
@@ -324,6 +392,8 @@ Tracked outputs include:
 - Model artifact
 - Feature importance
 - SHAP explainability outputs
+
+MLflow artifacts are stored locally and excluded from Git where appropriate.
 
 ---
 
@@ -361,6 +431,8 @@ Important features include:
 ---
 
 ## FastAPI Risk Intelligence API
+
+The project exposes cyber risk intelligence through FastAPI.
 
 ### Local API URL
 
@@ -469,7 +541,9 @@ ConvertTo-Json -Depth 5
 
 ## RAG Remediation Copilot
 
-The project includes a local retrieval-based remediation copilot. It does not require an external LLM API key.
+The project includes a local retrieval-based remediation copilot.
+
+It does not require an external LLM API key.
 
 The copilot retrieves defensive guidance from a local remediation knowledge base and generates context-aware remediation plans using:
 
@@ -481,7 +555,7 @@ The copilot retrieves defensive guidance from a local remediation knowledge base
 - Priority level
 - Local security remediation playbooks
 
-Knowledge base:
+### Knowledge Base
 
 ```text
 rag/knowledge_base/
@@ -492,7 +566,7 @@ rag/knowledge_base/
 └── vulnerability_management.md
 ```
 
-Example remediation API:
+### Example Remediation API
 
 ```powershell
 Invoke-RestMethod "http://127.0.0.1:8001/remediation/CVE-2026-48908" |
@@ -527,6 +601,8 @@ It does not provide:
 ---
 
 ## Copilot Evaluation
+
+The project includes an evaluation script for remediation copilot outputs.
 
 Run evaluation:
 
@@ -614,7 +690,7 @@ reports/api_monitoring_summary.json
 
 Phase 7 adds Docker support for the FastAPI risk intelligence service.
 
-Docker files:
+### Docker Files
 
 ```text
 Dockerfile
@@ -668,17 +744,6 @@ Up ... (healthy)
 Invoke-RestMethod http://127.0.0.1:8001/health | ConvertTo-Json -Depth 5
 ```
 
-Expected response:
-
-```json
-{
-  "status": "ok",
-  "analytics_database_exists": true,
-  "model_exists": true,
-  "monitoring_log_exists": true
-}
-```
-
 ### Run API Smoke Test
 
 ```powershell
@@ -698,12 +763,6 @@ PASS /metrics
 All smoke tests passed.
 ```
 
-### View Docker Logs
-
-```powershell
-docker compose logs --tail=50
-```
-
 ### Stop Docker API
 
 ```powershell
@@ -712,24 +771,122 @@ docker compose down
 
 ---
 
-## Docker Build CI
+## AWS Terraform Architecture Template
 
-The repository includes a Docker Build workflow:
+Phase 8 adds an AWS infrastructure-as-code template.
+
+This phase is designed as a **cloud architecture and Terraform validation layer**.
+
+It does not require running paid AWS resources during local development.
+
+Do not run `terraform apply` unless you understand the AWS resources and possible costs.
+
+### Terraform Folder
 
 ```text
-.github/workflows/docker-build.yml
+infrastructure/aws/
+├── README.md
+├── versions.tf
+├── variables.tf
+├── main.tf
+├── networking.tf
+├── security_groups.tf
+├── storage.tf
+├── ecr.tf
+├── iam.tf
+├── ecs.tf
+├── monitoring.tf
+├── outputs.tf
+└── terraform.tfvars.example
 ```
 
-The workflow builds the Docker image on:
+### AWS Architecture Covered
 
-- Push to `main`
-- Pull requests
+The Terraform template defines:
 
-This validates that the API container can be built successfully in CI.
+- VPC
+- Public subnets
+- Internet gateway
+- Route table
+- Application Load Balancer
+- ECS Fargate cluster
+- ECS service
+- ECS task definition
+- ECR container registry
+- S3 lakehouse bucket
+- IAM task execution role
+- IAM task role with S3 access
+- CloudWatch log group
+- CloudWatch dashboard
+- Security groups for ALB and ECS tasks
+
+### Intended Deployment Design
+
+```text
+Docker image
+→ Amazon ECR
+→ ECS Fargate service
+→ Application Load Balancer
+→ CloudWatch logs and metrics
+
+Lakehouse artifacts
+→ Amazon S3
+
+Infrastructure
+→ Terraform
+```
+
+### Terraform Local Validation
+
+If Terraform is installed locally:
+
+```powershell
+terraform -chdir=infrastructure/aws fmt -recursive
+terraform -chdir=infrastructure/aws init -backend=false
+terraform -chdir=infrastructure/aws validate
+```
+
+Expected result:
+
+```text
+Success! The configuration is valid.
+```
+
+### Python Template Validation
+
+If Terraform is not installed locally, validate the template structure with Python:
+
+```powershell
+python .\scripts\validate_terraform_template.py
+```
+
+Expected result:
+
+```text
+Terraform template validation completed successfully.
+```
+
+### Terraform CI
+
+The repository includes:
+
+```text
+.github/workflows/terraform-validate.yml
+```
+
+The workflow runs:
+
+- `terraform fmt -check -recursive`
+- `terraform init -backend=false`
+- `terraform validate`
+
+This validates the infrastructure template on GitHub Actions without applying resources.
 
 ---
 
 ## Streamlit Dashboard
+
+The project also includes a Streamlit dashboard for cyber risk exploration.
 
 Run dashboard:
 
@@ -832,6 +989,12 @@ python .\scripts\run_api.py
 docker compose up -d
 ```
 
+### 9. Validate Terraform Template
+
+```powershell
+python .\scripts\validate_terraform_template.py
+```
+
 ---
 
 ## Useful Commands
@@ -890,6 +1053,12 @@ docker compose up -d
 python .\scripts\smoke_test_api.py
 ```
 
+### Validate Terraform Template
+
+```powershell
+python .\scripts\validate_terraform_template.py
+```
+
 ---
 
 ## CI/CD
@@ -898,10 +1067,13 @@ The repository includes GitHub Actions workflows for:
 
 - Python CI
 - Docker Build CI
+- Terraform Validate CI
 
 The Python CI validates the core project workflow.
 
 The Docker Build workflow validates that the FastAPI service can be containerised successfully.
+
+The Terraform Validate workflow validates the AWS infrastructure template without creating cloud resources.
 
 ---
 
@@ -960,6 +1132,16 @@ This project demonstrates:
 - Docker Compose deployment
 - Docker Build CI
 
+### Cloud / DevOps
+
+- AWS architecture design
+- Terraform Infrastructure as Code
+- ECS Fargate deployment template
+- ECR container registry template
+- S3 lakehouse storage template
+- CloudWatch monitoring template
+- Terraform validation CI
+
 ### Cybersecurity Analytics
 
 - CVE prioritisation
@@ -976,10 +1158,11 @@ Current limitations:
 
 - The API uses local DuckDB and local model artifacts.
 - Docker Compose mounts local `analytics/` and `models/` directories.
+- The Terraform template is an architecture template and has not been applied to production AWS.
 - The RAG copilot uses a local knowledge base rather than a production vector database.
 - EPSS values may be missing depending on available source data.
 - The ML model is affected by class imbalance, especially for the `High` class.
-- Current deployment is local Docker deployment, not yet cloud-hosted.
+- Current local deployment uses Docker Compose rather than a hosted cloud service.
 
 ---
 
@@ -987,15 +1170,16 @@ Current limitations:
 
 Planned next steps:
 
-- Terraform infrastructure template
-- AWS deployment architecture
-- Cloud-ready storage and compute design
-- API authentication
-- Container registry publishing
-- Cloud monitoring and alerting
-- Production vector database for RAG
-- More advanced LLM evaluation
-- Scheduled data refresh workflow
+- Push Docker image to ECR
+- Add AWS deployment pipeline
+- Add HTTPS with ACM
+- Add API authentication
+- Add production secrets management
+- Add S3-backed artifact loading
+- Add scheduled data refresh workflow
+- Add production vector database for RAG
+- Add more advanced LLM evaluation
+- Add CloudWatch alarms
 
 ---
 
