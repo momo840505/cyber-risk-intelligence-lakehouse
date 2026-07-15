@@ -1,4 +1,4 @@
-﻿variable "aws_region" {
+variable "aws_region" {
   description = "AWS region used by the deployment template."
   type        = string
   default     = "ap-southeast-2"
