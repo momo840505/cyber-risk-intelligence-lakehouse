@@ -1,0 +1,18 @@
+﻿aws_region   = "ap-southeast-2"
+project_name = "cyber-risk-intelligence"
+environment  = "dev"
+
+# Replace this with the real ECR image URI after pushing the Docker image.
+# Example:
+# container_image = "123456789012.dkr.ecr.ap-southeast-2.amazonaws.com/cyber-risk-intelligence-dev-api:latest"
+container_image = "public.ecr.aws/docker/library/nginx:latest"
+
+app_port        = 8000
+desired_count   = 1
+container_cpu   = 512
+container_memory = 1024
+
+# For real deployment, restrict this to trusted IP ranges.
+allowed_cidr_blocks = ["0.0.0.0/0"]
+
+health_check_path = "/health"
