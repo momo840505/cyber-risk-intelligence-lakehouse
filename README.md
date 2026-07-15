@@ -1,6 +1,6 @@
 # Cyber Risk Intelligence Lakehouse + AI Remediation Copilot
 
-[![Python CI](https://github.com/momo840505/cyber-risk-intelligence-lakehouse/actions/workflows/ci.yml/badge.svg)](https://github.com/momo840505/cyber-risk-intelligence-lakehouse/actions)
+[![Python CI](https://github.com/momo840505/cyber-risk-intelligence-lakehouse/actions/workflows/python-ci.yml/badge.svg)](https://github.com/momo840505/cyber-risk-intelligence-lakehouse/actions/workflows/python-ci.yml)
 [![Docker Build](https://github.com/momo840505/cyber-risk-intelligence-lakehouse/actions/workflows/docker-build.yml/badge.svg)](https://github.com/momo840505/cyber-risk-intelligence-lakehouse/actions)
 [![Terraform Validate](https://github.com/momo840505/cyber-risk-intelligence-lakehouse/actions/workflows/terraform-validate.yml/badge.svg)](https://github.com/momo840505/cyber-risk-intelligence-lakehouse/actions)
 ![Python](https://img.shields.io/badge/Python-3.11-blue)
