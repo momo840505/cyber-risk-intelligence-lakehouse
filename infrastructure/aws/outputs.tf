@@ -1,4 +1,4 @@
-﻿output "aws_region" {
+output "aws_region" {
   description = "AWS region used by this template."
   value       = var.aws_region
 }

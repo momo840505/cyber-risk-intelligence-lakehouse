@@ -1,4 +1,4 @@
-﻿resource "aws_iam_role" "ecs_task_execution" {
+resource "aws_iam_role" "ecs_task_execution" {
   name = "${local.name_prefix}-ecs-task-execution-role"
 
   assume_role_policy = jsonencode(

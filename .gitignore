@@ -43,3 +43,9 @@ models/*.joblib
 
 # Runtime monitoring logs
 monitoring/api_usage_log.csv
+
+# Terraform local files
+**/.terraform/
+**/.terraform.lock.hcl
+**/terraform.tfstate
+**/terraform.tfstate.backup

@@ -1,4 +1,4 @@
-﻿resource "aws_cloudwatch_dashboard" "api" {
+resource "aws_cloudwatch_dashboard" "api" {
   dashboard_name = "${local.name_prefix}-api-dashboard"
 
   dashboard_body = jsonencode(
