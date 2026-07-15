@@ -1,201 +1,171 @@
-# 🛡️ Cyber Risk Intelligence Lakehouse + AI Remediation Copilot
+# Cyber Risk Intelligence Lakehouse + AI Remediation Copilot
 
+[![Python CI](https://github.com/momo840505/cyber-risk-intelligence-lakehouse/actions/workflows/ci.yml/badge.svg)](https://github.com/momo840505/cyber-risk-intelligence-lakehouse/actions)
+[![Docker Build](https://github.com/momo840505/cyber-risk-intelligence-lakehouse/actions/workflows/docker-build.yml/badge.svg)](https://github.com/momo840505/cyber-risk-intelligence-lakehouse/actions)
 ![Python](https://img.shields.io/badge/Python-3.11-blue)
-![PySpark](https://img.shields.io/badge/PySpark-ETL-orange)
-![dbt](https://img.shields.io/badge/dbt-Analytics%20Engineering-red)
-![DuckDB](https://img.shields.io/badge/DuckDB-Analytics-yellow)
-![FastAPI](https://img.shields.io/badge/FastAPI-Backend%20API-green)
-![MLflow](https://img.shields.io/badge/MLflow-Experiment%20Tracking-blueviolet)
-![SHAP](https://img.shields.io/badge/SHAP-Explainable%20AI-lightgrey)
-![RAG](https://img.shields.io/badge/RAG-Remediation%20Copilot-purple)
-![Monitoring](https://img.shields.io/badge/Monitoring-API%20Observability-teal)
-![CI](https://img.shields.io/badge/GitHub%20Actions-Passing-brightgreen)
+![PySpark](https://img.shields.io/badge/PySpark-Lakehouse-orange)
+![dbt](https://img.shields.io/badge/dbt-Analytics-red)
+![FastAPI](https://img.shields.io/badge/FastAPI-API-green)
+![Docker](https://img.shields.io/badge/Docker-Ready-blue)
+![MLflow](https://img.shields.io/badge/MLflow-Tracking-lightgrey)
+![SHAP](https://img.shields.io/badge/SHAP-Explainability-purple)
 
-A full-stack cyber risk intelligence platform that ingests public vulnerability intelligence, builds a Bronze/Silver/Gold lakehouse using PySpark, transforms analytics marts with dbt and DuckDB, visualises risk through Streamlit, trains an explainable ML priority classifier with SHAP and MLflow, exposes the results through FastAPI, provides a local RAG-based remediation copilot for defensive vulnerability response, and records API monitoring metrics for production-readiness.
+## Overview
 
----
+This project is an end-to-end **Cyber Risk Intelligence Platform** that combines data engineering, analytics engineering, machine learning, API development, RAG-based remediation guidance, monitoring, and Docker deployment readiness.
 
-## 📌 Project Summary
+It ingests public cyber risk data, builds a PySpark lakehouse, transforms analytics marts with dbt and DuckDB, trains a vulnerability priority classifier, explains model behaviour with SHAP, exposes risk intelligence through FastAPI, generates defensive remediation plans using local RAG retrieval, tracks API usage through monitoring logs, and provides Docker deployment support.
 
-This project demonstrates an end-to-end cyber risk data platform for vulnerability prioritisation and remediation planning.
+The project is designed as a portfolio-ready platform for roles such as:
 
-It combines:
-
-- Public cyber risk intelligence ingestion
-- PySpark lakehouse ETL
-- Bronze, Silver, and Gold data layers
-- Data quality validation
-- dbt analytics engineering
-- DuckDB analytical warehouse
-- Streamlit dashboard
-- Machine learning priority classifier
-- SHAP model explainability
-- MLflow experiment tracking
-- FastAPI backend service
-- Local RAG remediation copilot
-- Copilot evaluation report
-- API request logging and metrics endpoint
-- Monitoring reports for endpoint usage and response time
-- GitHub Actions CI
-
-The platform answers questions such as:
-
-- Which vulnerabilities should be prioritised first?
-- Which vendors or products have the highest cyber risk?
-- Which CWE weakness categories appear most risky?
-- How are vulnerability trends changing over time?
-- Why did the ML model classify a CVE as High, Medium, or Low priority?
-- What defensive remediation actions should be taken for a specific CVE?
-- How many API requests were made, which endpoints were used, and how fast did they respond?
+- Data Engineer
+- Analytics Engineer
+- Data Scientist
+- Machine Learning Engineer
+- AI Engineer
+- Security Data Analyst
 
 ---
 
-## 🧱 Architecture
+## Current Status
 
-```mermaid
-flowchart LR
-    A[Public Cyber Risk Sources] --> B[Bronze Raw Data]
-    B --> C[Silver Cleaned Tables]
-    C --> D[Gold Risk Analytics Tables]
-    D --> E[DuckDB Analytics Database]
-    E --> F[dbt Staging Models]
-    F --> G[dbt Mart Models]
-    G --> H[Streamlit Dashboard]
-    G --> I[ML Priority Classifier]
-    I --> J[SHAP Explainability]
-    I --> K[MLflow Tracking]
-    G --> L[FastAPI Risk Intelligence API]
-    I --> L
-    G --> M[RAG Remediation Copilot]
-    M --> L
-    N[Local Knowledge Base] --> M
-    L --> O[API Request Logging]
-    O --> P[Monitoring Reports]
+```text
+✅ Phase 1: PySpark Cyber Risk Lakehouse
+✅ Phase 2: dbt + DuckDB Analytics Layer
+✅ Phase 3: ML Priority Classifier + SHAP + MLflow
+✅ Phase 4: FastAPI Risk Intelligence API
+✅ Phase 5: RAG Remediation Copilot
+✅ Phase 6: API Monitoring and Observability
+✅ Phase 7: Docker Deployment Readiness
 ```
 
 ---
 
-## 🌐 Data Sources
+## Architecture
 
-The project uses public cyber risk intelligence sources:
+```mermaid
+flowchart TD
+    A[Public Cyber Risk Sources] --> B[Bronze Layer]
+    B --> C[Silver Layer]
+    C --> D[Gold Layer]
 
-- **CISA KEV Catalog** — Known Exploited Vulnerabilities
-- **FIRST EPSS** — Exploit Prediction Scoring System
-- **NVD CVE API** — Recent CVE vulnerability records, CVSS metrics, CWE weakness data, vendor and product metadata
+    D --> E[dbt + DuckDB Analytics Marts]
+    E --> F[Streamlit Dashboard]
+    E --> G[ML Priority Classifier]
+    G --> H[SHAP Explainability]
+    G --> I[MLflow Tracking]
 
-The data is ingested into a local lakehouse structure and transformed into analytics-ready risk tables.
+    E --> J[FastAPI Risk Intelligence API]
+    G --> J
+
+    K[Local Remediation Knowledge Base] --> L[RAG Retrieval]
+    E --> L
+    L --> M[AI Remediation Copilot]
+    M --> J
+
+    J --> N[API Monitoring Middleware]
+    N --> O[API Usage Logs]
+    O --> P[Monitoring Reports]
+
+    J --> Q[Docker Container]
+    Q --> R[Docker Compose Deployment]
+    Q --> S[API Smoke Test]
+    Q --> T[Docker Build CI]
+```
 
 ---
 
-## 📂 Project Structure
+## Data Sources
+
+The platform uses public cyber risk intelligence sources:
+
+- **CISA Known Exploited Vulnerabilities (KEV)**: identifies vulnerabilities with evidence of active exploitation.
+- **EPSS vulnerability scoring data**: enriches vulnerabilities with exploit probability signals when available.
+- **NVD CVE data**: provides CVE metadata, CVSS severity, CWE information, vendor/product information, and vulnerability descriptions.
+
+---
+
+## Project Structure
 
 ```text
 cyber-risk-intelligence-lakehouse/
-│
-├── app/
-│   └── dashboard.py
-│
 ├── api/
 │   └── main.py
-│
+├── app/
+│   └── dashboard.py
 ├── assets/
 │   ├── dashboard_overview.png
 │   ├── dashboard_risk_analysis.png
 │   └── dashboard_top_vulnerabilities.png
-│
+├── data/
+│   ├── bronze/
+│   ├── silver/
+│   └── gold/
 ├── dbt/
 │   └── cyber_risk_dbt/
-│       ├── dbt_project.yml
-│       ├── profiles.yml
-│       └── models/
-│           ├── sources.yml
-│           ├── staging/
-│           └── marts/
-│
 ├── ml/
 │   └── train_priority_model.py
-│
+├── models/
+│   └── priority_classifier.joblib
+├── monitoring/
+│   └── api_usage_log.csv
 ├── rag/
-│   ├── __init__.py
 │   ├── remediation_copilot.py
 │   └── knowledge_base/
-│       ├── cisa_kev_remediation.md
-│       ├── cvss_prioritisation.md
-│       ├── cwe_remediation.md
-│       ├── emergency_response.md
-│       └── vulnerability_management.md
-│
 ├── reports/
 │   ├── data_quality_report.csv
 │   ├── model_metrics.json
-│   ├── classification_report.csv
-│   ├── confusion_matrix.csv
-│   ├── feature_importance.csv
 │   ├── feature_importance.png
 │   ├── shap_feature_importance.png
 │   ├── copilot_eval_report.csv
 │   ├── copilot_eval_summary.json
 │   ├── api_endpoint_summary.csv
 │   └── api_monitoring_summary.json
-│
 ├── scripts/
-│   ├── run_ingestion.py
-│   ├── build_analytics_database.py
-│   ├── validate_lakehouse.py
-│   ├── inspect_lakehouse.py
 │   ├── run_pipeline.py
 │   ├── run_dbt.py
 │   ├── run_ml.py
 │   ├── run_api.py
-│   ├── run_copilot.py
 │   ├── evaluate_copilot.py
-│   └── generate_monitoring_report.py
-│
-├── monitoring/
-│   └── api_usage_log.csv        # runtime log, ignored by git
-│
+│   ├── generate_monitoring_report.py
+│   └── smoke_test_api.py
 ├── src/
 │   └── cyber_risk/
-│       ├── ingestion/
-│       ├── etl/
-│       └── quality/
-│
+├── .github/
+│   └── workflows/
+│       ├── ci.yml
+│       └── docker-build.yml
+├── Dockerfile
+├── docker-compose.yml
 ├── requirements.txt
-├── pyproject.toml
+├── requirements-api.txt
+├── .dockerignore
+├── .gitignore
 └── README.md
 ```
 
 ---
 
-## 🥉🥈🥇 Lakehouse Layers
+## Lakehouse Layers
 
 ### Bronze Layer
 
-The Bronze layer stores raw downloaded cyber intelligence files from CISA KEV, EPSS, and NVD.
-
-Examples:
-
-```text
-data/bronze/kev/
-data/bronze/epss/
-data/bronze/nvd/
-```
+The Bronze layer stores raw ingested cyber risk data from public sources, including CISA KEV, EPSS, and NVD CVE records.
 
 ### Silver Layer
 
-The Silver layer contains cleaned and normalised PySpark tables.
+The Silver layer cleans and normalises records for analytics:
 
-Silver outputs include:
-
-- Silver KEV table
-- Silver EPSS table
-- Silver NVD table
+- Standardised CVE IDs
+- Normalised CVSS fields
+- Parsed CWE IDs
+- Vendor and product extraction
+- Known exploited vulnerability flags
+- Reference and affected product counts
 
 ### Gold Layer
 
-The Gold layer contains analytics-ready risk tables.
-
-Gold outputs include:
+The Gold layer produces analytics-ready datasets:
 
 - `vulnerability_priority`
 - `vendor_risk_summary`
@@ -204,80 +174,37 @@ Gold outputs include:
 
 ---
 
-## ✅ Latest Validated Lakehouse Output
+## Risk Scoring Logic
 
-Latest local pipeline run:
-
-```text
-Silver KEV: 1,638 rows
-Silver EPSS: 5,000 rows
-Silver NVD: 7,479 rows
-
-Gold Vulnerability Priority: 7,479 rows
-Gold Vendor Risk Summary: 2,936 rows
-Gold Monthly Vulnerability Trends: 2 rows
-Gold CWE Risk Summary: 317 rows
-```
-
-Data quality validation:
-
-```text
-PASS: 18
-WARN: 0
-FAIL: 0
-```
-
-The validation report is exported to:
-
-```text
-reports/data_quality_report.csv
-```
-
----
-
-## 🧮 Risk Scoring Logic
-
-The Gold vulnerability priority table combines multiple risk signals:
+The project uses an explainable risk scoring approach that combines:
 
 - CVSS base score
-- CVSS severity
-- EPSS score and percentile
-- CISA KEV known exploited flag
+- Known exploited vulnerability status
+- EPSS score when available
 - Attack vector
-- Attack complexity
-- Privileges required
-- User interaction
-- CWE weakness category
+- Weakness type
 - Reference count
-- Affected vendor and product information
+- Affected product count
 
-The platform assigns each vulnerability a risk score and priority level:
-
-```text
-High
-Medium
-Low
-```
-
-In the latest run, only a small number of vulnerabilities were classified as High priority. This reflects the current live public data snapshot and the strict risk scoring logic.
+The goal is to produce both a risk score and an explainable prioritisation output for security stakeholders.
 
 ---
 
-## 🧪 Data Quality Validation
+## Data Quality Validation
 
-The validation layer checks core data quality rules before downstream analytics are used.
+The project includes automated validation for Gold lakehouse outputs.
 
 Validation checks include:
 
 - Required columns exist
 - CVE IDs are not missing
-- CVE IDs are unique
-- CVSS scores are between 0 and 10
-- EPSS scores are between 0 and 1
-- Risk scores are within expected range
+- CVE IDs are unique where expected
+- CVSS scores are within valid range
+- EPSS scores are within valid range when available
+- Risk scores are within expected bounds
 - Priority levels are valid
-- Known exploited flags are valid binary values
-- Vendor and CWE summary tables contain valid counts
+- Known exploited flags are binary
+- Vendor risk summary tables contain required fields
 
 Run validation:
 
@@ -285,95 +212,98 @@ Run validation:
 python .\scripts\validate_lakehouse.py
 ```
 
----
-
-## 🧱 dbt + DuckDB Analytics Layer
-
-The project includes a dbt analytics layer on top of the PySpark Gold tables.
-
-DuckDB is used as a local analytical warehouse:
+Example result:
 
 ```text
-analytics/cyber_risk.duckdb
+PASS: 18
+WARN: 0
+FAIL: 0
+Data quality validation completed successfully.
 ```
 
-The dbt project builds:
+---
 
-- Source definitions for raw Gold tables
-- Staging models for cleaned analytical views
-- Mart models for dashboard, API, and ML use cases
-- dbt tests for not-null, uniqueness, and accepted values
-- dbt docs for model lineage and documentation
+## dbt Analytics Layer
 
-Run dbt workflow:
+The dbt layer builds staging and mart models on top of a DuckDB analytics database.
+
+Staging models:
+
+- `stg_vulnerability_priority`
+- `stg_vendor_risk_summary`
+- `stg_monthly_vulnerability_trends`
+- `stg_cwe_risk_summary`
+
+Mart models:
+
+- `mart_vulnerability_priority`
+- `mart_vendor_risk_summary`
+- `mart_monthly_vulnerability_trends`
+- `mart_cwe_risk_summary`
+
+Run dbt:
 
 ```powershell
 python .\scripts\run_dbt.py
 ```
 
-Run dbt docs locally:
-
-```powershell
-dbt docs serve --project-dir dbt\cyber_risk_dbt --profiles-dir dbt\cyber_risk_dbt
-```
-
-Then open:
+Example dbt result:
 
 ```text
-http://localhost:8080
+Done. PASS=26 WARN=0 ERROR=0 SKIP=0 NO-OP=0 TOTAL=26
 ```
 
----
-
-## 📊 Streamlit Dashboard
-
-The project includes an interactive Streamlit dashboard for exploring cyber risk intelligence.
-
-Run locally:
+Serve dbt docs:
 
 ```powershell
-python -m streamlit run app\dashboard.py
+cd dbt\cyber_risk_dbt
+dbt docs generate
+dbt docs serve
 ```
-
-Dashboard features:
-
-- Cyber risk overview KPIs
-- Priority distribution
-- Known exploited vulnerability analysis
-- Vendor and product risk ranking
-- Monthly vulnerability trends
-- CWE risk summary
-- Top risky vulnerabilities
-
-### Dashboard Screenshots
-
-![Dashboard Overview](assets/dashboard_overview.png)
-
-![Dashboard Risk Analysis](assets/dashboard_risk_analysis.png)
-
-![Dashboard Top Vulnerabilities](assets/dashboard_top_vulnerabilities.png)
 
 ---
 
-## 🤖 Machine Learning Priority Classifier
+## Machine Learning Priority Classifier
 
-The project trains a machine learning classifier to predict vulnerability priority levels using features from the dbt mart table.
+The ML component trains a classifier that predicts vulnerability priority level:
 
-Model features include:
+```text
+Low
+Medium
+High
+```
 
-- CVSS base score
-- CVSS severity label
-- Known exploited flag
-- Attack vector
-- Attack complexity
-- Privileges required
-- User interaction
-- CWE category
-- Reference count
-- Affected entry count
-- Published month
+Example features:
 
-The model is trained using a Random Forest classifier and tracked with MLflow.
+- `cvss_base_score`
+- `epss_score`
+- `epss_percentile`
+- `is_known_exploited`
+- `reference_count`
+- `affected_entry_count`
+- `published_month`
+- `cvss_base_severity`
+- `attack_vector`
+- `attack_complexity`
+- `privileges_required`
+- `user_interaction`
+- `cwe_id`
+
+Current model metrics:
+
+```json
+{
+  "training_rows": 5609,
+  "test_rows": 1870,
+  "accuracy": 0.9856,
+  "balanced_accuracy": 0.8232,
+  "macro_f1": 0.8793,
+  "weighted_f1": 0.9855,
+  "classes": ["High", "Low", "Medium"]
+}
+```
+
+Important note: the `High` class is highly imbalanced, so balanced accuracy and macro F1 are more meaningful than accuracy alone.
 
 Run ML workflow:
 
@@ -381,186 +311,134 @@ Run ML workflow:
 python .\scripts\run_ml.py
 ```
 
-Generated outputs:
+---
+
+## MLflow Tracking
+
+The ML workflow logs experiment metadata with MLflow.
+
+Tracked outputs include:
+
+- Model metrics
+- Classifier configuration
+- Model artifact
+- Feature importance
+- SHAP explainability outputs
+
+---
+
+## Model Explainability with SHAP
+
+The project includes two explainability outputs:
 
 ```text
-reports/model_metrics.json
-reports/classification_report.csv
-reports/confusion_matrix.csv
-reports/feature_importance.csv
 reports/feature_importance.png
 reports/shap_feature_importance.png
-models/priority_classifier.joblib
-mlruns/
 ```
 
-The model artifact and MLflow local tracking directory are ignored by Git because they are local runtime artifacts.
-
----
-
-## 📈 Latest ML Results
-
-Latest model metrics:
-
-```text
-Accuracy: 0.9856
-Balanced Accuracy: 0.8232
-Macro F1: 0.8793
-Weighted F1: 0.9855
-```
-
-Important note:
-
-The dataset is highly imbalanced. In the latest run, the High-priority class contained only 8 records. Therefore, balanced accuracy and macro F1 are reported alongside overall accuracy to provide a more realistic view of model performance.
-
----
-
-## 🔎 Model Feature Importance
+### Feature Importance
 
 ![Feature Importance](reports/feature_importance.png)
 
-This chart shows which input features the Random Forest model relied on most when predicting vulnerability priority levels.
+The feature importance plot shows which input variables the classifier uses most often to split and classify vulnerabilities.
 
-The most influential feature is `cvss_base_score`, which means the model heavily depends on the technical severity of a vulnerability. Other important signals include whether the CVE is known to be exploited, CVSS severity labels, CWE weakness categories, and the number of public references.
-
-In practical terms, the model learned that high-risk vulnerabilities are usually associated with stronger severity scores, known exploitation evidence, specific weakness categories, and attack exposure signals.
-
----
-
-## 🧠 SHAP Explainability
+### SHAP Feature Importance
 
 ![SHAP Feature Importance](reports/shap_feature_importance.png)
 
-SHAP explains how much each feature contributes to the model's predictions on average.
+The SHAP plot explains which features have the strongest average impact on model predictions.
 
-The SHAP results show that `cvss_base_score`, CVSS severity, known exploitation status, user interaction, attack vector, and reference count are the strongest drivers of the model's vulnerability priority predictions.
+Important features include:
 
-This makes the model more interpretable because the prediction is not treated as a black box. Instead, the project can explain why certain vulnerabilities are prioritised higher than others.
-
-### Key Feature Meanings
-
-- `cvss_base_score`: Technical severity score of the vulnerability.
-- `is_known_exploited`: Whether the vulnerability appears in the CISA KEV known exploited catalog.
-- `cvss_base_severity`: CVSS severity label such as Critical, High, Medium, or Low.
-- `cwe_id`: Common Weakness Enumeration category representing the vulnerability weakness type.
-- `reference_count`: Number of external references linked to the CVE.
-- `attack_vector`: Whether the vulnerability can be exploited over the network, locally, or physically.
-- `user_interaction`: Whether exploitation requires user interaction.
+- CVSS base score
+- Known exploited status
+- CVSS severity
+- CWE category
+- Reference count
+- User interaction
+- Attack vector
 
 ---
 
-## 🧪 MLflow Experiment Tracking
+## FastAPI Risk Intelligence API
 
-The ML workflow uses MLflow to track:
-
-- Model parameters
-- Evaluation metrics
-- Classification report
-- Confusion matrix
-- Feature importance artifacts
-- SHAP explainability artifacts
-- Trained model artifact
-
-Run MLflow UI locally:
-
-```powershell
-mlflow ui --backend-store-uri .\mlruns --port 5000
-```
-
-Then open:
+### Local API URL
 
 ```text
-http://localhost:5000
+http://127.0.0.1:8001
 ```
 
----
+### Swagger UI
 
-## 🚀 FastAPI Risk Intelligence API
+```text
+http://127.0.0.1:8001/docs
+```
 
-The project includes a FastAPI backend service that exposes the lakehouse analytics marts, ML classifier, and RAG remediation copilot through REST API endpoints.
+### Metrics Endpoint
 
-Run the API locally:
+```text
+http://127.0.0.1:8001/metrics
+```
+
+Start the API locally:
 
 ```powershell
 python .\scripts\run_api.py
 ```
 
-Open Swagger UI:
-
-```text
-http://127.0.0.1:8000/docs
-```
-
-### Available API Endpoints
-
-```text
-GET  /
-GET  /health
-GET  /vulnerabilities/top
-GET  /vulnerabilities/{cve_id}
-GET  /vendors/risk-summary
-GET  /cwe/risk-summary
-GET  /trends/monthly
-POST /predict-priority
-GET  /remediation/{cve_id}
-GET  /metrics
-```
-
-### Example API Checks
-
-Health check:
-
-```powershell
-Invoke-RestMethod http://127.0.0.1:8000/health
-```
-
-Top risky vulnerabilities:
-
-```powershell
-Invoke-RestMethod "http://127.0.0.1:8000/vulnerabilities/top?limit=5"
-```
-
-CVE lookup:
-
-```powershell
-Invoke-RestMethod "http://127.0.0.1:8000/vulnerabilities/CVE-2016-20068"
-```
-
-Vendor risk summary:
-
-```powershell
-Invoke-RestMethod "http://127.0.0.1:8000/vendors/risk-summary?limit=5"
-```
-
-CWE risk summary:
-
-```powershell
-Invoke-RestMethod "http://127.0.0.1:8000/cwe/risk-summary?limit=5"
-```
-
-Monthly trends:
-
-```powershell
-Invoke-RestMethod "http://127.0.0.1:8000/trends/monthly"
-```
-
-API monitoring metrics:
-
-```powershell
-Invoke-RestMethod "http://127.0.0.1:8000/metrics" | ConvertTo-Json -Depth 6
-```
+The script starts FastAPI on port `8001` by default.
 
 ---
 
-## 🧠 ML Prediction API
+## API Endpoints
 
-The API includes an ML prediction endpoint:
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/` | Service metadata |
+| GET | `/health` | Health check for analytics DB, model, and monitoring log |
+| GET | `/metrics` | API usage and response time metrics |
+| GET | `/vulnerabilities/top` | Top vulnerabilities ranked by risk |
+| GET | `/vulnerabilities/{cve_id}` | CVE-level detail lookup |
+| GET | `/vendors/risk-summary` | Vendor and product risk summary |
+| GET | `/cwe/risk-summary` | CWE-level risk summary |
+| GET | `/trends/monthly` | Monthly vulnerability trend summary |
+| POST | `/predict-priority` | ML priority prediction |
+| GET | `/remediation/{cve_id}` | RAG-based remediation plan |
 
-```text
-POST /predict-priority
+---
+
+## Example API Usage
+
+### Health Check
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8001/health | ConvertTo-Json -Depth 5
 ```
 
-Example request:
+Example response:
+
+```json
+{
+  "status": "ok",
+  "analytics_database_exists": true,
+  "model_exists": true,
+  "monitoring_log_exists": true
+}
+```
+
+### Top Vulnerabilities
+
+```powershell
+Invoke-RestMethod "http://127.0.0.1:8001/vulnerabilities/top?limit=5"
+```
+
+### CVE Lookup
+
+```powershell
+Invoke-RestMethod "http://127.0.0.1:8001/vulnerabilities/CVE-2016-20068"
+```
+
+### ML Prediction
 
 ```powershell
 $body = @{
@@ -580,137 +458,75 @@ $body = @{
 } | ConvertTo-Json
 
 Invoke-RestMethod `
-    -Uri "http://127.0.0.1:8000/predict-priority" `
+    -Uri "http://127.0.0.1:8001/predict-priority" `
     -Method Post `
-    -Body $body `
-    -ContentType "application/json"
-```
-
-Example output:
-
-```json
-{
-  "predicted_priority_level": "High",
-  "prediction_probabilities": {
-    "High": 0.5469,
-    "Low": 0.0553,
-    "Medium": 0.3978
-  }
-}
+    -ContentType "application/json" `
+    -Body $body |
+ConvertTo-Json -Depth 5
 ```
 
 ---
 
-## 🧩 RAG Remediation Copilot
+## RAG Remediation Copilot
 
-The project includes a local RAG-based remediation copilot that retrieves defensive guidance from a local knowledge base and generates a CVE-specific remediation plan.
+The project includes a local retrieval-based remediation copilot. It does not require an external LLM API key.
 
-The copilot does not require an external LLM API key. It uses TF-IDF retrieval over local remediation documents and combines retrieved knowledge with structured CVE context from the analytics mart.
+The copilot retrieves defensive guidance from a local remediation knowledge base and generates context-aware remediation plans using:
 
-Knowledge base documents:
+- CVE metadata
+- CVSS severity
+- Known exploited status
+- Attack vector
+- CWE weakness type
+- Priority level
+- Local security remediation playbooks
+
+Knowledge base:
 
 ```text
-rag/knowledge_base/cisa_kev_remediation.md
-rag/knowledge_base/cvss_prioritisation.md
-rag/knowledge_base/cwe_remediation.md
-rag/knowledge_base/emergency_response.md
-rag/knowledge_base/vulnerability_management.md
+rag/knowledge_base/
+├── cisa_kev_remediation.md
+├── cvss_prioritisation.md
+├── cwe_remediation.md
+├── emergency_response.md
+└── vulnerability_management.md
 ```
 
-The copilot provides:
-
-- CVE context
-- Priority explanation
-- Urgency classification
-- Recommended remediation SLA
-- Defensive remediation actions
-- Retrieved knowledge sources
-- Safety note
-
-Run the copilot locally:
+Example remediation API:
 
 ```powershell
-python .\scripts\run_copilot.py
-```
-
-Example input:
-
-```text
-CVE-2026-48908
-```
-
----
-
-## 🛠️ Remediation API Endpoint
-
-The FastAPI service exposes the copilot through:
-
-```text
-GET /remediation/{cve_id}
-```
-
-Example:
-
-```powershell
-Invoke-RestMethod "http://127.0.0.1:8000/remediation/CVE-2026-48908" |
+Invoke-RestMethod "http://127.0.0.1:8001/remediation/CVE-2026-48908" |
 ConvertTo-Json -Depth 8
 ```
 
-Example output fields:
+Example output includes:
 
-```json
-{
-  "cve_id": "CVE-2026-48908",
-  "found": true,
-  "priority_level": "High",
-  "risk_score": 7.7,
-  "urgency": "Emergency",
-  "recommended_sla": "24 to 72 hours",
-  "why_this_priority": [
-    "This CVE appears in the known exploited vulnerability signal, so it should be prioritised for urgent remediation.",
-    "The CVSS base score is 10.0, with severity CRITICAL.",
-    "The attack vector is NETWORK, which increases exposure risk because the vulnerability may be exploitable remotely.",
-    "The weakness category is CWE-434, so remediation should consider weakness-specific controls."
-  ],
-  "recommended_actions": [
-    "Confirm whether the affected vendor and product are present in the environment.",
-    "Assign a remediation owner and document the remediation deadline.",
-    "Prioritise remediation immediately.",
-    "Apply vendor patches or mitigations as soon as possible.",
-    "If patching is delayed, isolate affected systems or restrict exposure."
-  ],
-  "retrieved_sources": [
-    {
-      "file_name": "cisa_kev_remediation.md",
-      "similarity_score": 0.4011
-    },
-    {
-      "file_name": "cwe_remediation.md",
-      "similarity_score": 0.3465
-    }
-  ],
-  "safety_note": "This copilot provides defensive remediation guidance only. It does not provide exploit instructions or offensive payloads."
-}
+```text
+priority_level
+risk_score
+urgency
+recommended_sla
+vulnerability_context
+why_this_priority
+recommended_actions
+retrieved_sources
+safety_note
 ```
 
-### Context-Aware Remediation
+### Security-Safe Behaviour
 
-The copilot uses context-aware logic so that emergency recommendations are only used when appropriate.
+The copilot is designed for defensive remediation guidance only.
 
-For example:
+It does not provide:
 
-- Known exploited or Critical CVEs receive emergency response guidance.
-- Medium CVEs receive scheduled remediation guidance.
-- CWE-89 vulnerabilities receive SQL injection remediation actions.
-- CWE-434 vulnerabilities receive dangerous file upload remediation actions.
-
-This avoids giving emergency remediation instructions to every vulnerability and makes the output more operationally useful.
+- Exploit instructions
+- Offensive payloads
+- Attack execution steps
+- Weaponisation guidance
 
 ---
 
-## 🧪 Copilot Evaluation
-
-The project includes a lightweight evaluation script for the remediation copilot.
+## Copilot Evaluation
 
 Run evaluation:
 
@@ -718,24 +534,18 @@ Run evaluation:
 python .\scripts\evaluate_copilot.py
 ```
 
-Latest evaluation result:
+Example result:
 
-```text
-Evaluated cases: 5
-Passed cases: 5
-Failed cases: 0
-Pass rate: 1.0
+```json
+{
+  "evaluated_cases": 5,
+  "passed_cases": 5,
+  "failed_cases": 0,
+  "pass_rate": 1.0
+}
 ```
 
-Evaluation checks include:
-
-- CVE found in analytics mart
-- Remediation actions generated
-- Retrieved sources included
-- Safety note included
-- Priority reasoning included
-
-Generated reports:
+Reports:
 
 ```text
 reports/copilot_eval_report.csv
@@ -744,102 +554,35 @@ reports/copilot_eval_summary.json
 
 ---
 
+## API Monitoring and Observability
 
-## 📡 API Monitoring and Observability
+Phase 6 adds lightweight API monitoring.
 
-Phase 6 adds lightweight monitoring for the FastAPI service.
+The FastAPI middleware records:
 
-The API records each request into a local runtime CSV log:
+- Timestamp
+- HTTP method
+- Request path
+- Status code
+- Response time
+- Client host
+
+Runtime log:
 
 ```text
 monitoring/api_usage_log.csv
 ```
 
-This log is intentionally ignored by Git because it changes every time the API is used.
-
-The monitoring system captures:
-
-- UTC timestamp
-- HTTP method
-- API path
-- response status code
-- response time in milliseconds
-- client host
+This runtime log is excluded from Git.
 
 ### Metrics Endpoint
 
-The API includes a metrics endpoint:
-
-```text
-GET /metrics
-```
-
-Example command:
-
 ```powershell
-Invoke-RestMethod http://127.0.0.1:8000/metrics |
+Invoke-RestMethod http://127.0.0.1:8001/metrics |
 ConvertTo-Json -Depth 6
 ```
 
-Example output:
-
-```json
-{
-  "total_requests": 9,
-  "error_count": 0,
-  "error_rate": 0.0,
-  "average_response_time_ms": 16.815,
-  "p95_response_time_ms": 28.866,
-  "requests_by_path": {
-    "/health": 1,
-    "/vulnerabilities/top": 1,
-    "/vendors/risk-summary": 1,
-    "/cwe/risk-summary": 1,
-    "/trends/monthly": 1,
-    "/remediation/CVE-2026-48908": 1,
-    "/metrics": 1
-  },
-  "requests_by_status_code": {
-    "200": 9
-  }
-}
-```
-
-### Monitoring Report Script
-
-Generate API monitoring reports:
-
-```powershell
-python .\scripts\generate_monitoring_report.py
-```
-
-This creates:
-
-```text
-reports/api_endpoint_summary.csv
-reports/api_monitoring_summary.json
-```
-
-The endpoint summary report includes:
-
-- endpoint path
-- request count
-- error count
-- average response time
-- p95 response time
-
-The monitoring summary report includes:
-
-- total requests
-- total errors
-- error rate
-- average response time
-- p95 response time
-- number of unique paths
-- first request timestamp
-- last request timestamp
-
-Latest local monitoring summary:
+Example metrics:
 
 ```json
 {
@@ -852,309 +595,412 @@ Latest local monitoring summary:
 }
 ```
 
-### Why This Matters
-
-Monitoring makes the API more production-ready because it helps answer operational questions:
-
-- Which endpoints are being used most often?
-- Are any requests failing?
-- How fast is the API responding?
-- Which endpoint has the highest latency?
-- Is the service healthy after adding ML and RAG features?
-
-This is not a full production observability stack, but it demonstrates practical API monitoring, request logging, and operational reporting.
-
----
-
-## ⚙️ Run the Full Pipeline
-
-Run the full local workflow:
-
-```powershell
-python .\scripts\run_pipeline.py
-```
-
-This runs:
-
-```text
-Bronze ingestion
-→ Silver ETL
-→ Gold ETL
-→ Data quality validation
-→ DuckDB analytics database build
-→ dbt staging and marts
-→ dbt tests and docs
-→ Lakehouse inspection
-```
-
-Run ML workflow:
-
-```powershell
-python .\scripts\run_ml.py
-```
-
-Run FastAPI service:
-
-```powershell
-python .\scripts\run_api.py
-```
-
-Run RAG copilot:
-
-```powershell
-python .\scripts\run_copilot.py
-```
-
-Run copilot evaluation:
-
-```powershell
-python .\scripts\evaluate_copilot.py
-```
-
-Generate API monitoring reports:
+### Generate Monitoring Report
 
 ```powershell
 python .\scripts\generate_monitoring_report.py
 ```
 
----
+Generated reports:
 
-## 🧰 Tech Stack
-
-### Data Engineering
-
-- Python
-- PySpark
-- Parquet
-- DuckDB
-- dbt
-
-### Data Quality
-
-- Custom validation scripts
-- CSV validation reports
-- dbt tests
-
-### Dashboard
-
-- Streamlit
-- Plotly
-
-### Machine Learning
-
-- scikit-learn
-- Random Forest
-- SHAP
-- MLflow
-- joblib
-
-### Backend API
-
-- FastAPI
-- Uvicorn
-- Pydantic
-
-### RAG Copilot
-
-- Local Markdown knowledge base
-- TF-IDF retrieval
-- Cosine similarity
-- Context-aware remediation generation
-- Copilot evaluation report
-
-### Monitoring
-
-- FastAPI middleware
-- Request logging
-- CSV runtime logs
-- Endpoint usage summary
-- Response time metrics
-- JSON monitoring summary
-
-### DevOps
-
-- Git
-- GitHub
-- GitHub Actions CI
+```text
+reports/api_endpoint_summary.csv
+reports/api_monitoring_summary.json
+```
 
 ---
 
-## 🚀 Setup Instructions
+## Docker Deployment Readiness
 
-Clone the repository:
+Phase 7 adds Docker support for the FastAPI risk intelligence service.
+
+Docker files:
+
+```text
+Dockerfile
+docker-compose.yml
+.dockerignore
+requirements-api.txt
+scripts/smoke_test_api.py
+.github/workflows/docker-build.yml
+```
+
+### Port Mapping
+
+The container runs FastAPI internally on port `8000`.
+
+The local machine accesses the container through port `8001`.
+
+```text
+Local machine: http://127.0.0.1:8001
+Docker container: http://0.0.0.0:8000
+Port mapping: 8001:8000
+```
+
+### Build Docker Image
+
+```powershell
+docker compose build
+```
+
+### Start Docker API
+
+```powershell
+docker compose up -d
+```
+
+### Check Container Status
+
+```powershell
+docker compose ps
+```
+
+Expected status:
+
+```text
+Up ... (healthy)
+0.0.0.0:8001->8000/tcp
+```
+
+### Test Docker API
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8001/health | ConvertTo-Json -Depth 5
+```
+
+Expected response:
+
+```json
+{
+  "status": "ok",
+  "analytics_database_exists": true,
+  "model_exists": true,
+  "monitoring_log_exists": true
+}
+```
+
+### Run API Smoke Test
+
+```powershell
+python .\scripts\smoke_test_api.py
+```
+
+Expected result:
+
+```text
+========== API Smoke Test ==========
+Base URL: http://127.0.0.1:8001
+PASS /health
+PASS /vulnerabilities/top
+PASS /remediation/CVE-2026-48908
+PASS /metrics
+
+All smoke tests passed.
+```
+
+### View Docker Logs
+
+```powershell
+docker compose logs --tail=50
+```
+
+### Stop Docker API
+
+```powershell
+docker compose down
+```
+
+---
+
+## Docker Build CI
+
+The repository includes a Docker Build workflow:
+
+```text
+.github/workflows/docker-build.yml
+```
+
+The workflow builds the Docker image on:
+
+- Push to `main`
+- Pull requests
+
+This validates that the API container can be built successfully in CI.
+
+---
+
+## Streamlit Dashboard
+
+Run dashboard:
+
+```powershell
+python -m streamlit run app\dashboard.py
+```
+
+Dashboard screenshots:
+
+![Dashboard Overview](assets/dashboard_overview.png)
+
+![Dashboard Risk Analysis](assets/dashboard_risk_analysis.png)
+
+![Dashboard Top Vulnerabilities](assets/dashboard_top_vulnerabilities.png)
+
+---
+
+## One-Command Pipeline
+
+Run the full local pipeline:
+
+```powershell
+python .\scripts\run_pipeline.py
+```
+
+The pipeline executes:
+
+```text
+Bronze ingestion
+→ Build Silver tables
+→ Build Gold tables
+→ Validate Gold tables
+→ Build dbt analytics marts
+→ Inspect lakehouse outputs
+```
+
+---
+
+## Local Setup
+
+### 1. Clone Repository
 
 ```powershell
 git clone https://github.com/momo840505/cyber-risk-intelligence-lakehouse.git
 cd cyber-risk-intelligence-lakehouse
 ```
 
-Create virtual environment:
+### 2. Create Virtual Environment
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
 
-Install dependencies:
+### 3. Install Dependencies
 
 ```powershell
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
-Run the full pipeline:
+### 4. Configure Hadoop on Windows
+
+PySpark on Windows may require `winutils.exe`.
+
+Example configuration:
+
+```powershell
+$env:HADOOP_HOME = "C:\hadoop"
+$env:Path = "C:\hadoop\bin;$env:Path"
+```
+
+Check:
+
+```powershell
+Test-Path C:\hadoop\bin\winutils.exe
+```
+
+### 5. Run Pipeline
 
 ```powershell
 python .\scripts\run_pipeline.py
 ```
 
-Run the dashboard:
-
-```powershell
-python -m streamlit run app\dashboard.py
-```
-
-Run ML workflow:
+### 6. Run ML Workflow
 
 ```powershell
 python .\scripts\run_ml.py
 ```
 
-Run API:
+### 7. Start API
 
 ```powershell
 python .\scripts\run_api.py
 ```
 
-Open API docs:
-
-```text
-http://127.0.0.1:8000/docs
-```
-
-Run remediation copilot:
+### 8. Start Docker API
 
 ```powershell
-python .\scripts\run_copilot.py
+docker compose up -d
 ```
 
-Generate monitoring report after using the API:
+---
+
+## Useful Commands
+
+### Run Data Quality Validation
+
+```powershell
+python .\scripts\validate_lakehouse.py
+```
+
+### Build dbt Analytics Layer
+
+```powershell
+python .\scripts\run_dbt.py
+```
+
+### Train ML Model
+
+```powershell
+python .\scripts\run_ml.py
+```
+
+### Start FastAPI
+
+```powershell
+python .\scripts\run_api.py
+```
+
+### Run Copilot Evaluation
+
+```powershell
+python .\scripts\evaluate_copilot.py
+```
+
+### Generate Monitoring Report
 
 ```powershell
 python .\scripts\generate_monitoring_report.py
 ```
 
----
+### Build Docker API
 
-## ✅ Completed Features
+```powershell
+docker compose build
+```
 
-```text
-✅ Public cyber risk data ingestion
-✅ Bronze / Silver / Gold lakehouse architecture
-✅ PySpark ETL pipeline
-✅ CISA KEV, EPSS, and NVD data integration
-✅ Gold vulnerability risk scoring
-✅ Vendor risk summary
-✅ CWE risk summary
-✅ Monthly vulnerability trend analysis
-✅ Data quality validation report
-✅ Streamlit dashboard
-✅ DuckDB analytics warehouse
-✅ dbt staging and mart models
-✅ dbt tests and docs
-✅ ML priority classifier
-✅ SHAP explainability
-✅ MLflow experiment tracking
-✅ FastAPI backend service
-✅ Swagger API documentation
-✅ ML prediction API endpoint
-✅ Local RAG remediation copilot
-✅ Remediation API endpoint
-✅ Copilot evaluation report
-✅ API request logging middleware
-✅ /metrics observability endpoint
-✅ Endpoint usage report
-✅ API monitoring summary report
-✅ Runtime monitoring log ignored by Git
-✅ GitHub Actions CI
+### Run Docker API
+
+```powershell
+docker compose up -d
+```
+
+### Run API Smoke Test
+
+```powershell
+python .\scripts\smoke_test_api.py
 ```
 
 ---
 
-## ⚠️ Limitations
+## CI/CD
 
-- The project currently runs locally rather than on a deployed cloud environment.
-- Public cyber risk data changes over time, so row counts and risk rankings may change between pipeline runs.
-- EPSS values may be null when the latest NVD CVEs do not appear in the top EPSS dataset.
-- The ML classifier is trained on a highly imbalanced target distribution.
-- The remediation copilot is retrieval-based and does not replace expert security review.
-- The copilot provides defensive remediation guidance only and does not provide exploit instructions.
-- The current RAG implementation uses a local knowledge base instead of a production vector database.
-- The monitoring implementation is lightweight local logging, not a full Prometheus/Grafana production stack.
+The repository includes GitHub Actions workflows for:
 
----
+- Python CI
+- Docker Build CI
 
-## 🔮 Future Improvements
+The Python CI validates the core project workflow.
 
-Planned next phases:
-
-```text
-Phase 6: Monitoring and API logging ✅
-Phase 7: Docker deployment
-Phase 8: AWS deployment
-Phase 9: Terraform infrastructure
-Phase 10: Production CI/CD
-```
-
-Possible future enhancements:
-
-- Add Docker Compose for dashboard, API, and ML services
-- Add structured JSON logging
-- Add Prometheus-style monitoring metrics
-- Add Grafana dashboard templates
-- Add API request validation tests
-- Add a vector database for RAG retrieval
-- Add optional LLM-based remediation narrative generation
-- Add AWS S3 lakehouse storage
-- Add Athena or Glue integration
-- Add Terraform infrastructure templates
-- Deploy FastAPI to AWS App Runner, ECS, or Lambda
-- Deploy Streamlit dashboard to a public hosting platform
+The Docker Build workflow validates that the FastAPI service can be containerised successfully.
 
 ---
 
-## 👤 Author
+## Portfolio Value
 
-**Mo Mo**
+This project demonstrates:
 
-Master of Data Science student building practical data engineering, analytics engineering, machine learning, and AI portfolio projects.
+### Data Engineering
 
-Project focus:
+- PySpark ETL
+- Bronze/Silver/Gold lakehouse design
+- Data validation
+- Pipeline automation
 
-```text
-Cybersecurity data engineering
-Lakehouse architecture
-Analytics engineering
-Machine learning explainability
-Risk intelligence APIs
-RAG-based remediation assistance
-```
+### Analytics Engineering
+
+- dbt staging and marts
+- DuckDB analytics database
+- SQL transformation layer
+- dbt tests and docs
+
+### Machine Learning
+
+- Feature engineering
+- Priority classification
+- Model evaluation
+- Class imbalance awareness
+- MLflow tracking
+
+### Explainable AI
+
+- Feature importance
+- SHAP explainability
+- Model interpretation
+
+### AI Engineering
+
+- Retrieval-based remediation copilot
+- Local knowledge base
+- Context-aware recommendation logic
+- Safety-aware defensive responses
+
+### Backend Engineering
+
+- FastAPI service
+- Swagger documentation
+- REST API endpoints
+- ML inference endpoint
+
+### MLOps / Platform Engineering
+
+- API monitoring
+- Runtime logging
+- Metrics endpoint
+- Docker containerisation
+- Docker Compose deployment
+- Docker Build CI
+
+### Cybersecurity Analytics
+
+- CVE prioritisation
+- CISA KEV enrichment
+- CVSS analysis
+- CWE remediation guidance
+- Defensive vulnerability management
 
 ---
 
-## 📌 Current Status
+## Limitations
 
-```text
-Status: Phase 6 Complete
-Latest completed phase: API Monitoring and Metrics Reporting
-CI status: Passing
-Local pipeline: Passing
-Dashboard: Working
-API: Working locally
-ML workflow: Working locally
-RAG copilot: Working locally
-Copilot evaluation: Passing
-API monitoring: Working locally
-Metrics endpoint: Working locally
-Monitoring report: Generated
-```
+Current limitations:
+
+- The API uses local DuckDB and local model artifacts.
+- Docker Compose mounts local `analytics/` and `models/` directories.
+- The RAG copilot uses a local knowledge base rather than a production vector database.
+- EPSS values may be missing depending on available source data.
+- The ML model is affected by class imbalance, especially for the `High` class.
+- Current deployment is local Docker deployment, not yet cloud-hosted.
+
+---
+
+## Future Improvements
+
+Planned next steps:
+
+- Terraform infrastructure template
+- AWS deployment architecture
+- Cloud-ready storage and compute design
+- API authentication
+- Container registry publishing
+- Cloud monitoring and alerting
+- Production vector database for RAG
+- More advanced LLM evaluation
+- Scheduled data refresh workflow
+
+---
+
+## Author
+
+**Wei-Ting Mo (MOMO)**
+
+GitHub: [momo840505](https://github.com/momo840505)
