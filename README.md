@@ -153,7 +153,7 @@ cyber-risk-intelligence-lakehouse/
 │   └── train_priority_model.py
 │
 ├── models/
-│   └── priority_classifier.joblib
+│   └── exploitation_likelihood_classifier.joblib
 │
 ├── monitoring/
 │   └── api_usage_log.csv
@@ -325,55 +325,82 @@ dbt docs serve
 
 ---
 
-## Machine Learning Priority Classifier
+## Machine Learning: Exploitation-Likelihood Classifier
 
-The ML component trains a classifier that predicts vulnerability priority level.
+The ML component trains a classifier that predicts whether a CVE is likely
+to become a **CISA Known Exploited Vulnerability (KEV)** entry, using only
+metadata available at CVE publication time.
+
+### A design note on target leakage (and why the target changed)
+
+An earlier version of this model predicted `priority_level`, a label
+computed in the ETL layer as a fixed linear combination of CVSS score,
+EPSS percentile, and a handful of CVSS vector fields, thresholded into
+four bands (see `src/cyber_risk/etl/build_gold_tables.py`). Those exact
+same fields were also being used as the model's training features. That
+meant the "classifier" wasn't learning anything from the data -- it was
+using 300 decision trees to re-derive a formula it already had every
+input to compute directly, which is why accuracy came out around **98.6%**
+(reported below, kept here deliberately as a worked example of the
+problem, not a result to be proud of).
+
+The fix: predict `is_known_exploited` instead. Unlike `priority_level`,
+KEV membership is a genuinely independent, forward-looking label --
+CISA adds a CVE to the list only after real-world exploitation is
+observed, which has nothing to do with how the CVSS/EPSS fields were
+combined in this project's own ETL code. `epss_score` / `epss_percentile`
+are also excluded from the features: EPSS is itself a model for the same
+question, so using its output as an input feature would just be
+re-packaging someone else's prediction rather than a genuine independent
+signal.
 
 ### Target
 
-The model predicts:
-
 ```text
-Low
-Medium
-High
+is_known_exploited: 0 (not in KEV)  |  1 (in KEV)
 ```
 
 ### Features
 
-Example features include:
+Deliberately limited to information available at CVE publication time,
+before anyone knows whether the vulnerability will be exploited:
 
 - `cvss_base_score`
-- `epss_score`
-- `epss_percentile`
-- `is_known_exploited`
-- `reference_count`
-- `affected_entry_count`
-- `published_month`
 - `cvss_base_severity`
 - `attack_vector`
 - `attack_complexity`
 - `privileges_required`
 - `user_interaction`
 - `cwe_id`
+- `reference_count`
+- `affected_entry_count`
+- `published_month`
+
+`risk_score`, `priority_level`, `epss_score`, and `epss_percentile` are
+intentionally **not** used as features -- see the note above.
 
 ### Current Model Metrics
 
+KEV membership is rare (most CVEs are never observed being exploited), so
+this is reported as an imbalanced binary classification problem. Accuracy
+alone is close to meaningless here -- a model that always predicts "not
+exploited" already scores close to the baseline below without learning
+anything, which is why ROC-AUC and average precision are the headline
+numbers, not accuracy.
+
 ```json
 {
-  "training_rows": 5609,
-  "test_rows": 1870,
-  "accuracy": 0.9856,
-  "balanced_accuracy": 0.8232,
-  "macro_f1": 0.8793,
-  "weighted_f1": 0.9855,
-  "classes": ["High", "Low", "Medium"]
+  "positive_rate_test": "<run scripts/run_ml.py to fill in>",
+  "baseline_accuracy_always_majority_class": "<run scripts/run_ml.py to fill in>",
+  "roc_auc": "<run scripts/run_ml.py to fill in>",
+  "average_precision": "<run scripts/run_ml.py to fill in>",
+  "accuracy": "<run scripts/run_ml.py to fill in>",
+  "balanced_accuracy": "<run scripts/run_ml.py to fill in>"
 }
 ```
 
-Important note: the `High` class is highly imbalanced, so balanced accuracy and macro F1 are more meaningful than accuracy alone.
-
-Run ML workflow:
+Run the ML workflow and copy the real numbers from
+`reports/model_metrics.json` into the block above:
 
 ```powershell
 python .\scripts\run_ml.py
@@ -474,7 +501,7 @@ The script starts FastAPI on port `8001` by default.
 | GET | `/vendors/risk-summary` | Vendor and product risk summary |
 | GET | `/cwe/risk-summary` | CWE-level risk summary |
 | GET | `/trends/monthly` | Monthly vulnerability trend summary |
-| POST | `/predict-priority` | ML priority prediction |
+| POST | `/predict-exploitation-likelihood` | Predicts KEV-exploitation likelihood from static CVE metadata |
 | GET | `/remediation/{cve_id}` | RAG-based remediation plan |
 
 ---
@@ -510,14 +537,16 @@ Invoke-RestMethod "http://127.0.0.1:8001/vulnerabilities/top?limit=5"
 Invoke-RestMethod "http://127.0.0.1:8001/vulnerabilities/CVE-2016-20068"
 ```
 
-### ML Prediction
+### Exploitation-Likelihood Prediction
+
+Note there is no `is_known_exploited`, `epss_score`, or `epss_percentile`
+in the request body -- those are the target and the leakage-prone fields
+excluded from the model. See "Machine Learning: Exploitation-Likelihood
+Classifier" above.
 
 ```powershell
 $body = @{
     cvss_base_score = 9.8
-    epss_score = 0
-    epss_percentile = 0
-    is_known_exploited = 1
     reference_count = 5
     affected_entry_count = 1
     published_month = 7
@@ -530,7 +559,7 @@ $body = @{
 } | ConvertTo-Json
 
 Invoke-RestMethod `
-    -Uri "http://127.0.0.1:8001/predict-priority" `
+    -Uri "http://127.0.0.1:8001/predict-exploitation-likelihood" `
     -Method Post `
     -ContentType "application/json" `
     -Body $body |
@@ -1098,9 +1127,12 @@ This project demonstrates:
 ### Machine Learning
 
 - Feature engineering
-- Priority classification
-- Model evaluation
-- Class imbalance awareness
+- Leakage-aware target design (see "Machine Learning: Exploitation-Likelihood
+  Classifier" above for a worked example of catching and fixing a
+  label-leakage bug, not just avoiding it from the start)
+- Imbalanced binary classification (KEV exploitation likelihood)
+- Evaluation beyond accuracy: ROC-AUC, average precision, majority-class
+  baseline
 - MLflow tracking
 
 ### Explainable AI
@@ -1161,7 +1193,13 @@ Current limitations:
 - The Terraform template is an architecture template and has not been applied to production AWS.
 - The RAG copilot uses a local knowledge base rather than a production vector database.
 - EPSS values may be missing depending on available source data.
-- The ML model is affected by class imbalance, especially for the `High` class.
+- The exploitation-likelihood model predicts KEV membership, which is
+  itself an imperfect and delayed proxy for real-world exploitation --
+  a CVE can be actively exploited before CISA adds it to KEV, so the
+  model's positive labels lag reality somewhat.
+- The classifier does not use text features (e.g. CVE description, NLP on
+  vendor advisories), which likely carry additional predictive signal
+  beyond the structured CVSS/CWE fields currently used.
 - Current local deployment uses Docker Compose rather than a hosted cloud service.
 
 ---
@@ -1182,9 +1220,3 @@ Planned next steps:
 - Add CloudWatch alarms
 
 ---
-
-## Author
-
-**Wei-Ting Mo (MOMO)**
-
-GitHub: [momo840505](https://github.com/momo840505)
