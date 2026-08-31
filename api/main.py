@@ -19,7 +19,10 @@ from rag.remediation_copilot import generate_remediation_plan
 BASE_DIR = Path(__file__).resolve().parents[1]
 
 ANALYTICS_DATABASE_PATH = BASE_DIR / "analytics" / "cyber_risk.duckdb"
-MODEL_PATH = BASE_DIR / "models" / "priority_classifier.joblib"
+# Renamed to match ml/train_priority_model.py: the model predicts
+# exploitation likelihood (is_known_exploited), not the deterministic
+# priority_level. See that file's module docstring for the full rationale.
+MODEL_PATH = BASE_DIR / "models" / "exploitation_likelihood_classifier.joblib"
 MONITORING_DIR = BASE_DIR / "monitoring"
 API_USAGE_LOG_PATH = MONITORING_DIR / "api_usage_log.csv"
 
@@ -39,18 +42,26 @@ app = FastAPI(
     title="Cyber Risk Intelligence API",
     description=(
         "FastAPI service for querying cyber risk lakehouse marts, "
-        "predicting vulnerability priority, and generating RAG-based "
+        "predicting exploitation likelihood, and generating RAG-based "
         "remediation guidance."
     ),
-    version="2.0.0",
+    version="2.1.0",
 )
 
 
-class PriorityPredictionRequest(BaseModel):
+class ExploitationLikelihoodRequest(BaseModel):
+    """
+    Inputs available at CVE publication time.
+
+    Deliberately excludes epss_score / epss_percentile (EPSS is itself a
+    model for the same question -- passing its output in here would be
+    feeding the model an answer, not a feature) and is_known_exploited /
+    risk_score / priority_level (those are the target and things derived
+    from the target). See ml/train_priority_model.py for the full
+    rationale.
+    """
+
     cvss_base_score: float = Field(..., ge=0, le=10)
-    epss_score: Optional[float] = Field(default=0, ge=0, le=1)
-    epss_percentile: Optional[float] = Field(default=0, ge=0, le=1)
-    is_known_exploited: int = Field(..., ge=0, le=1)
     reference_count: int = Field(default=0, ge=0)
     affected_entry_count: int = Field(default=0, ge=0)
     published_month: int = Field(..., ge=1, le=12)
@@ -88,7 +99,7 @@ def load_model():
             status_code=500,
             detail=(
                 "ML model not found. "
-                "Run python scripts/run_ml.py before using prediction endpoint."
+                "Run python scripts/run_ml.py before using the prediction endpoint."
             ),
         )
 
@@ -370,17 +381,21 @@ def get_monthly_trends() -> list[dict]:
     return run_query(query)
 
 
-@app.post("/predict-priority")
-def predict_priority(request: PriorityPredictionRequest) -> dict:
+@app.post("/predict-exploitation-likelihood")
+def predict_exploitation_likelihood(
+    request: ExploitationLikelihoodRequest,
+) -> dict:
+    """
+    Predict the probability that a CVE will become a CISA KEV entry,
+    using only metadata available at publication time (no EPSS, no
+    already-known exploitation status).
+    """
     model = load_model()
 
     input_dataframe = pd.DataFrame(
         [
             {
                 "cvss_base_score": request.cvss_base_score,
-                "epss_score": request.epss_score or 0,
-                "epss_percentile": request.epss_percentile or 0,
-                "is_known_exploited": request.is_known_exploited,
                 "reference_count": request.reference_count,
                 "affected_entry_count": request.affected_entry_count,
                 "published_month": request.published_month,
@@ -395,22 +410,27 @@ def predict_priority(request: PriorityPredictionRequest) -> dict:
     )
 
     prediction = model.predict(input_dataframe)[0]
+    probabilities = model.predict_proba(input_dataframe)[0]
+    classes = model.classes_
 
-    response = {
-        "predicted_priority_level": str(prediction),
+    exploited_probability = float(
+        probabilities[list(classes).index(1)]
+    ) if 1 in list(classes) else None
+
+    return {
+        "predicted_known_exploited": bool(prediction),
+        "known_exploited_probability": (
+            round(exploited_probability, 4)
+            if exploited_probability is not None
+            else None
+        ),
         "input": request.model_dump(),
+        "note": (
+            "This estimates exploitation likelihood from static CVE "
+            "metadata only. It does not use EPSS and is not a substitute "
+            "for it -- treat this as a complementary triage signal."
+        ),
     }
-
-    if hasattr(model, "predict_proba"):
-        probabilities = model.predict_proba(input_dataframe)[0]
-        classes = model.classes_
-
-        response["prediction_probabilities"] = {
-            str(class_name): round(float(probability), 4)
-            for class_name, probability in zip(classes, probabilities)
-        }
-
-    return response
 
 
 @app.get("/remediation/{cve_id}")
