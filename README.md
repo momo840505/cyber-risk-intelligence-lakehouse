@@ -1,5 +1,6 @@
 # Cyber Risk Intelligence Lakehouse + AI Remediation Copilot
 
+[![Live Dashboard](https://img.shields.io/badge/Live%20Dashboard-Open%20App-FF4B4B?logo=streamlit&logoColor=white)](https://cyber-risk-intelligence-momo.streamlit.app)
 [![Python CI](https://github.com/momo840505/cyber-risk-intelligence-lakehouse/actions/workflows/python-ci.yml/badge.svg)](https://github.com/momo840505/cyber-risk-intelligence-lakehouse/actions/workflows/python-ci.yml)
 [![Docker Build](https://github.com/momo840505/cyber-risk-intelligence-lakehouse/actions/workflows/docker-build.yml/badge.svg)](https://github.com/momo840505/cyber-risk-intelligence-lakehouse/actions)
 [![Terraform Validate](https://github.com/momo840505/cyber-risk-intelligence-lakehouse/actions/workflows/terraform-validate.yml/badge.svg)](https://github.com/momo840505/cyber-risk-intelligence-lakehouse/actions)
@@ -917,7 +918,14 @@ This validates the infrastructure template on GitHub Actions without applying re
 
 The project also includes a Streamlit dashboard for cyber risk exploration.
 
-Run dashboard:
+👉 [Open the live dashboard](https://cyber-risk-intelligence-momo.streamlit.app)
+
+The deployed dashboard reads a small, git-committed snapshot of the Gold layer
+(`app/data/gold/`, produced by `scripts/prepare_dashboard_data.py`) rather than
+the full local lakehouse, since Streamlit Community Cloud has no Spark/JVM
+runtime to rebuild it. See that script's docstring for details.
+
+Run locally instead:
 
 ```powershell
 python -m streamlit run app\dashboard.py
