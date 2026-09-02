@@ -21,7 +21,12 @@ st.set_page_config(
 # =========================
 
 BASE_DIR = Path(__file__).resolve().parents[1]
-GOLD_DIR = BASE_DIR / "data" / "gold"
+
+# This reads the small, git-committed snapshot in app/data/gold/ (single flat parquet
+# files, one per Gold table) rather than the full local lakehouse at data/gold/ (PySpark
+# output, gitignored). Streamlit Community Cloud only has this repo's committed files to
+# work with -- see scripts/prepare_dashboard_data.py for how the snapshot is produced.
+GOLD_DIR = BASE_DIR / "app" / "data" / "gold"
 
 
 # =========================
@@ -86,12 +91,13 @@ st.markdown(
 
 @st.cache_data(show_spinner=False)
 def load_gold_table(table_name: str) -> pd.DataFrame:
-    table_path = GOLD_DIR / table_name
+    table_path = GOLD_DIR / f"{table_name}.parquet"
 
     if not table_path.exists():
         raise FileNotFoundError(
             f"Missing table: {table_path}. "
-            "Please run the Silver and Gold ETL scripts first."
+            "Run the pipeline (python .\\scripts\\run_pipeline.py), then "
+            "python scripts\\prepare_dashboard_data.py to build the dashboard snapshot."
         )
 
     return pd.read_parquet(table_path)
@@ -159,8 +165,8 @@ except FileNotFoundError as error:
     st.error(str(error))
     st.info(
         "Run these commands first:\n\n"
-        "python -m cyber_risk.etl.build_silver_tables\n\n"
-        "python -m cyber_risk.etl.build_gold_tables"
+        "python .\\scripts\\run_pipeline.py\n\n"
+        "python scripts\\prepare_dashboard_data.py"
     )
     st.stop()
 
