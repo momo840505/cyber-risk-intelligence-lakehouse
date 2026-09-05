@@ -4,14 +4,17 @@
   "positive_rate_train": 0.001,
   "positive_rate_test": 0.001,
   "baseline_accuracy_always_majority_class": 0.999,
-  "accuracy": 0.9307,
-  "balanced_accuracy": 0.4658,
-  "macro_f1": 0.4821,
-  "weighted_f1": 0.9631,
-  "roc_auc": 0.4629,
-  "average_precision": 0.0017,
+  "accuracy": 0.9611,
+  "balanced_accuracy": 0.481,
+  "macro_f1": 0.4901,
+  "weighted_f1": 0.9791,
+  "roc_auc": 0.4712,
+  "average_precision": 0.002,
   "classes": [
     0,
     1
-  ]
+  ],
+  "cv_folds": 5,
+  "cv_roc_auc_out_of_fold": 0.7975,
+  "cv_average_precision_out_of_fold": 0.0059
 }

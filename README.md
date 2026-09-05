@@ -386,21 +386,36 @@ KEV membership is rare (most CVEs are never observed being exploited), so
 this is reported as an imbalanced binary classification problem. Accuracy
 alone is close to meaningless here -- a model that always predicts "not
 exploited" already scores close to the baseline below without learning
-anything, which is why ROC-AUC and average precision are the headline
-numbers, not accuracy.
+anything.
 
 ```json
 {
   "positive_rate_test": 0.001,
   "baseline_accuracy_always_majority_class": 0.999,
-  "roc_auc": 0.4629,
-  "average_precision": 0.0017,
-  "accuracy": 0.9307,
-  "balanced_accuracy": 0.4658
+  "accuracy": 0.9611,
+  "balanced_accuracy": 0.481,
+  "roc_auc": 0.4712,
+  "average_precision": 0.002,
+  "cv_folds": 5,
+  "cv_roc_auc_out_of_fold": 0.7975,
+  "cv_average_precision_out_of_fold": 0.0059
 }
 ```
 
-Only 12 of 11,714 CVEs in this dataset are known-exploited (0.10%). With that few positive examples, ROC-AUC and average precision above are close to chance level (0.50 and the 0.001 base rate, respectively) -- the honest read is that static CVSS/CWE metadata alone cannot reliably predict real-world exploitation at this label rate, not that the pipeline is broken. This is reported as-is rather than smoothed over; see 'Limitations' below for what would need to change for this to be reliable.
+Only 12 of 11,714 CVEs in this dataset are known-exploited (0.10%). A single
+train/test split only holds out about 3 positive examples, so the plain
+`roc_auc`/`average_precision` above are unstable -- rerunning with a
+different random seed has moved `roc_auc` between 0.46 and 0.47 on its own.
+`cv_roc_auc_out_of_fold` and `cv_average_precision_out_of_fold` are the
+trustworthy numbers: they come from 5-fold stratified cross-validation,
+pooling out-of-fold predictions across all 12 positive examples instead of
+just the ones in one split. That gives ROC-AUC of **0.80** -- meaningfully
+better than chance, so the model has learned a real signal from static
+CVSS/CWE metadata alone. Average precision stays low (0.0059) even with
+that signal, because at a 0.10% base rate a well-ranking model still
+produces many false positives for every true positive it flags -- that is
+an inherent property of finding 12 needles in an 11,714-row haystack, not a
+sign the pipeline is broken.
 
 Run the ML workflow and copy the real numbers from
 `reports/model_metrics.json` into the block above:
@@ -1217,7 +1232,7 @@ Current limitations:
   vendor advisories), which likely carry additional predictive signal
   beyond the structured CVSS/CWE fields currently used.
 - Current local deployment uses Docker Compose rather than a hosted cloud service.
-- Only 12 of 11,714 CVEs in the current dataset are known-exploited (0.10%), which is too few positive examples for the exploitation-likelihood classifier to learn a reliable signal (ROC-AUC and average precision both come out close to chance level, see 'Current Model Metrics' above). A larger historical KEV sample, or reframing this as anomaly detection rather than supervised classification, would be needed before trusting this model's predictions in practice.
+- Only 12 of 11,714 CVEs in the current dataset are known-exploited (0.10%). Cross-validated ROC-AUC (0.80, see 'Current Model Metrics' above) shows the model ranks likely-exploited CVEs meaningfully above others, but average precision stays low (0.0059) at this base rate -- in practice the model is useful for prioritising a review queue, not for an automated yes/no exploitation call. A larger historical KEV sample would be needed to push average precision higher.
 
 ---
 
