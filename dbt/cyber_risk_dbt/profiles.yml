@@ -3,5 +3,5 @@
   outputs:
     dev:
       type: duckdb
-      path: "C:/Users/momo8/Desktop/cyber-risk-intelligence-lakehouse/analytics/cyber_risk.duckdb"
+      path: "analytics/cyber_risk.duckdb"
       threads: 4
