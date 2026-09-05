@@ -57,7 +57,7 @@ flowchart TD
 
     D --> E[dbt + DuckDB Analytics Marts]
     E --> F[Streamlit Dashboard]
-    E --> G[ML Priority Classifier]
+    E --> G[ML Exploitation-Likelihood Classifier]
     G --> H[SHAP Explainability]
     G --> I[MLflow Tracking]
 
@@ -78,17 +78,21 @@ flowchart TD
     Q --> S[API Smoke Test]
     Q --> T[Docker Build CI]
 
-    Q --> U[AWS ECR]
-    U --> V[AWS ECS Fargate]
-    V --> W[Application Load Balancer]
-    V --> X[CloudWatch Logs and Dashboard]
-    Y[S3 Lakehouse Storage Template] --> V
-    Z[Terraform IaC] --> U
-    Z --> V
-    Z --> W
-    Z --> X
-    Z --> Y
+    Q -.->|planned, not yet applied| U[AWS ECR]
+    U -.-> V[AWS ECS Fargate]
+    V -.-> W[Application Load Balancer]
+    V -.-> X[CloudWatch Logs and Dashboard]
+    Y[S3 Lakehouse Storage Template] -.-> V
+    Z[Terraform IaC] -.-> U
+    Z -.-> V
+    Z -.-> W
+    Z -.-> X
+    Z -.-> Y
 ```
+
+Solid arrows are running today (Docker Compose, locally). Dashed arrows (AWS ECR
+onward) are the Terraform-templated target architecture that has **not**
+been applied yet -- see 'Limitations' and 'Future Improvements' below.
 
 ---
 
