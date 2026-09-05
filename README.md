@@ -391,14 +391,16 @@ numbers, not accuracy.
 
 ```json
 {
-  "positive_rate_test": "<run scripts/run_ml.py to fill in>",
-  "baseline_accuracy_always_majority_class": "<run scripts/run_ml.py to fill in>",
-  "roc_auc": "<run scripts/run_ml.py to fill in>",
-  "average_precision": "<run scripts/run_ml.py to fill in>",
-  "accuracy": "<run scripts/run_ml.py to fill in>",
-  "balanced_accuracy": "<run scripts/run_ml.py to fill in>"
+  "positive_rate_test": 0.001,
+  "baseline_accuracy_always_majority_class": 0.999,
+  "roc_auc": 0.4629,
+  "average_precision": 0.0017,
+  "accuracy": 0.9307,
+  "balanced_accuracy": 0.4658
 }
 ```
+
+Only 12 of 11,714 CVEs in this dataset are known-exploited (0.10%). With that few positive examples, ROC-AUC and average precision above are close to chance level (0.50 and the 0.001 base rate, respectively) -- the honest read is that static CVSS/CWE metadata alone cannot reliably predict real-world exploitation at this label rate, not that the pipeline is broken. This is reported as-is rather than smoothed over; see 'Limitations' below for what would need to change for this to be reliable.
 
 Run the ML workflow and copy the real numbers from
 `reports/model_metrics.json` into the block above:
@@ -1215,6 +1217,7 @@ Current limitations:
   vendor advisories), which likely carry additional predictive signal
   beyond the structured CVSS/CWE fields currently used.
 - Current local deployment uses Docker Compose rather than a hosted cloud service.
+- Only 12 of 11,714 CVEs in the current dataset are known-exploited (0.10%), which is too few positive examples for the exploitation-likelihood classifier to learn a reliable signal (ROC-AUC and average precision both come out close to chance level, see 'Current Model Metrics' above). A larger historical KEV sample, or reframing this as anomaly detection rather than supervised classification, would be needed before trusting this model's predictions in practice.
 
 ---
 
