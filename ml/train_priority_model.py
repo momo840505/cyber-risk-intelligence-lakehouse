@@ -23,7 +23,11 @@ from sklearn.metrics import (
     f1_score,
     roc_auc_score,
 )
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import (
+    StratifiedKFold,
+    cross_val_predict,
+    train_test_split,
+)
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder
 
@@ -179,10 +183,14 @@ def build_model_pipeline() -> Pipeline:
     # KEV membership is a rare-event / imbalanced target (most CVEs are
     # never observed being exploited). class_weight="balanced_subsample"
     # keeps the trees from just always predicting the majority class.
+    # min_samples_leaf is kept at 1 rather than the more typical 5+: with
+    # only ~9 positive examples in a training fold, a higher leaf size
+    # makes it structurally impossible for any leaf to specialise in the
+    # rare class -- it would always be diluted by majority-class rows.
     classifier = RandomForestClassifier(
         n_estimators=300,
         max_depth=10,
-        min_samples_leaf=5,
+        min_samples_leaf=1,
         class_weight="balanced_subsample",
         random_state=RANDOM_STATE,
         n_jobs=-1,
@@ -399,6 +407,43 @@ def main() -> None:
         for metric_name, metric_value in metrics.items():
             if isinstance(metric_value, (int, float)):
                 mlflow.log_metric(metric_name, metric_value)
+
+        # A single train/test split evaluates ROC-AUC/average precision on
+        # only ~3 positive examples in the held-out set -- with a sample
+        # that small, those numbers are close to noise (a different random
+        # split could easily swing ROC-AUC from ~0.3 to ~0.7 by luck alone).
+        # Stratified k-fold cross-validation pools out-of-fold predictions
+        # across all 12 positive examples in the full dataset instead of
+        # just the ones in one test split, which is the more statistically
+        # honest way to check whether this model has learned anything.
+        full_features = dataframe[NUMERIC_FEATURES + CATEGORICAL_FEATURES]
+        full_target = dataframe[TARGET_COLUMN].astype(int)
+
+        cv_splitter = StratifiedKFold(
+            n_splits=5, shuffle=True, random_state=RANDOM_STATE
+        )
+        cv_probabilities = cross_val_predict(
+            build_model_pipeline(),
+            full_features,
+            full_target,
+            cv=cv_splitter,
+            method="predict_proba",
+            n_jobs=-1,
+        )[:, 1]
+
+        metrics["cv_folds"] = cv_splitter.get_n_splits()
+        metrics["cv_roc_auc_out_of_fold"] = round(
+            float(roc_auc_score(full_target, cv_probabilities)), 4
+        )
+        metrics["cv_average_precision_out_of_fold"] = round(
+            float(average_precision_score(full_target, cv_probabilities)), 4
+        )
+
+        mlflow.log_metric("cv_roc_auc_out_of_fold", metrics["cv_roc_auc_out_of_fold"])
+        mlflow.log_metric(
+            "cv_average_precision_out_of_fold",
+            metrics["cv_average_precision_out_of_fold"],
+        )
 
         save_json(metrics, METRICS_PATH)
 
