@@ -10,10 +10,13 @@ from typing import Optional
 import duckdb
 import joblib
 import pandas as pd
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import FastAPI, HTTPException, Path as ApiPath, Query, Request
 from pydantic import BaseModel, Field
 
 from rag.remediation_copilot import generate_remediation_plan
+
+# Matches the CLI's own CVE validation in rag/remediation_copilot.py (re.match there).
+CVE_ID_PATTERN = r"^CVE-\d{4}-\d+$"
 
 
 BASE_DIR = Path(__file__).resolve().parents[1]
@@ -283,7 +286,9 @@ def get_top_vulnerabilities(
 
 
 @app.get("/vulnerabilities/{cve_id}")
-def get_vulnerability_by_cve(cve_id: str) -> dict:
+def get_vulnerability_by_cve(
+    cve_id: str = ApiPath(..., pattern=CVE_ID_PATTERN, description="e.g. CVE-2026-12345"),
+) -> dict:
     query = """
         select
             *
@@ -434,7 +439,9 @@ def predict_exploitation_likelihood(
 
 
 @app.get("/remediation/{cve_id}")
-def get_remediation_plan(cve_id: str) -> dict:
+def get_remediation_plan(
+    cve_id: str = ApiPath(..., pattern=CVE_ID_PATTERN, description="e.g. CVE-2026-12345"),
+) -> dict:
     plan = generate_remediation_plan(cve_id)
 
     if not plan.get("found"):

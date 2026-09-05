@@ -12,7 +12,7 @@ BASE_DIR = Path(__file__).resolve().parents[1]
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
 
-from rag.remediation_copilot import generate_remediation_plan
+from rag.remediation_copilot import CWE_ACTIONS, generate_remediation_plan
 
 
 REPORTS_DIR = BASE_DIR / "reports"
@@ -47,6 +47,21 @@ def evaluate_plan(plan: dict) -> dict:
         ]
     )
 
+    # Transparency signal, not part of "passed": `passed` above is a
+    # pipeline-completeness check (see README "Copilot Evaluation" section
+    # for why it will be ~100% by construction regardless of CVE). This
+    # field instead checks whether the plan's actions actually include any
+    # of the weakness-specific guidance from CWE_ACTIONS for this CVE's own
+    # CWE, i.e. content beyond the fixed urgency-tier baseline actions that
+    # get appended for every CVE.
+    cwe_id = str((plan.get("vulnerability_context") or {}).get("cwe_id"))
+    cwe_specific_options = CWE_ACTIONS.get(cwe_id, [])
+    has_cwe_mapping = bool(cwe_specific_options)
+    recommended_actions = plan.get("recommended_actions", []) or []
+    has_cwe_specific_guidance = has_cwe_mapping and any(
+        action in recommended_actions for action in cwe_specific_options
+    )
+
     return {
         "cve_id": plan.get("cve_id"),
         "found": found,
@@ -57,6 +72,9 @@ def evaluate_plan(plan: dict) -> dict:
         "source_count": len(plan.get("retrieved_sources", [])),
         "has_safety_note": has_safety_note,
         "has_priority_reason": has_priority_reason,
+        "cwe_id": cwe_id,
+        "has_cwe_mapping": has_cwe_mapping,
+        "has_cwe_specific_guidance": has_cwe_specific_guidance,
         "passed": passed,
     }
 
@@ -73,11 +91,27 @@ def main() -> None:
     report_dataframe = pd.DataFrame(rows)
     report_dataframe.to_csv(EVAL_REPORT_PATH, index=False)
 
+    cases_with_cwe_mapping = int(report_dataframe["has_cwe_mapping"].sum())
+    cwe_specific_guidance_rate = (
+        round(
+            float(
+                report_dataframe.loc[
+                    report_dataframe["has_cwe_mapping"], "has_cwe_specific_guidance"
+                ].mean()
+            ),
+            4,
+        )
+        if cases_with_cwe_mapping > 0
+        else None
+    )
+
     summary = {
         "evaluated_cases": int(len(report_dataframe)),
         "passed_cases": int(report_dataframe["passed"].sum()),
         "failed_cases": int((~report_dataframe["passed"]).sum()),
         "pass_rate": round(float(report_dataframe["passed"].mean()), 4),
+        "cases_with_cwe_mapping": cases_with_cwe_mapping,
+        "cwe_specific_guidance_rate": cwe_specific_guidance_rate,
     }
 
     EVAL_SUMMARY_PATH.write_text(
