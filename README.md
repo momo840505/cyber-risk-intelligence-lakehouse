@@ -16,11 +16,11 @@
 
 ## Overview
 
-This project is an end-to-end **Cyber Risk Intelligence Platform** that combines data engineering, analytics engineering, machine learning, API development, RAG-based remediation guidance, monitoring, Docker deployment readiness, and AWS infrastructure-as-code design.
+I built this project to pull together the pieces I learned across my Master of Data Science and turn them into something closer to a real system: a small lakehouse for public cyber risk data, an ML model on top of it, and an API + dashboard so the whole thing is actually usable, not just a notebook.
 
-It ingests public cyber risk data, builds a PySpark lakehouse, transforms analytics marts with dbt and DuckDB, trains a vulnerability priority classifier, explains model behaviour with SHAP, exposes risk intelligence through FastAPI, generates defensive remediation plans using local RAG retrieval, tracks API usage through monitoring logs, provides Docker deployment support, and includes a Terraform AWS architecture template.
+It ingests CISA/EPSS/NVD data, builds a PySpark lakehouse (Bronze/Silver/Gold), transforms it into analytics marts with dbt and DuckDB, trains a classifier that predicts exploitation likelihood, explains that model with SHAP, serves everything through FastAPI, and adds a local RAG-based copilot that suggests remediation steps for a given CVE. There's also API monitoring, a Docker setup, and a Terraform template for how I'd deploy this to AWS.
 
-The project is designed as a portfolio-ready platform for roles such as:
+I mainly built this with these roles in mind:
 
 - Data Engineer
 - Analytics Engineer
@@ -90,28 +90,18 @@ flowchart TD
     Z -.-> Y
 ```
 
-Solid arrows are running today (Docker Compose, locally). Dashed arrows (AWS ECR
-onward) are the Terraform-templated target architecture that has **not**
-been applied yet -- see 'Limitations' and 'Future Improvements' below.
+The solid arrows are what's actually running right now (Docker Compose, on my machine). The dashed part (AWS ECR onward) is the Terraform target architecture I designed but haven't applied to real AWS yet. More on that in Limitations and Future Improvements.
 
 ---
 
 ## Data Sources
 
-The platform uses public cyber risk intelligence sources:
+Three public cyber risk feeds:
 
-- **CISA Known Exploited Vulnerabilities (KEV)**  
-  Used to identify vulnerabilities with evidence of active exploitation.
-
-- **EPSS vulnerability scoring data**  
-  Used to enrich vulnerabilities with exploit probability signals when available.
-
-- **NVD CVE data**  
-  Used for CVE metadata, CVSS severity, CWE information, affected vendor/product information, and vulnerability descriptions.
-  Ingestion currently pulls a **rolling 30-day window** of recently-published CVEs
-  (`download_recent_nvd_cves(days_back=30)`), not full NVD history, so the dataset's
-  time span grows only as the pipeline is re-run over time -- see 'Limitations' below
-  for what this means for the trend charts and the model's label distribution.
+- **CISA Known Exploited Vulnerabilities (KEV)** — flags CVEs with confirmed real-world exploitation.
+- **EPSS scoring data** — exploit probability estimates, when available.
+- **NVD CVE data** — CVSS severity, CWE, affected vendor/product, and descriptions.
+  Right now ingestion only pulls a rolling 30-day window of recently-published CVEs (`download_recent_nvd_cves(days_back=30)`), not the full NVD history. That's a real limitation and it affects the trend charts and the model's label balance — details in Limitations below.
 
 ---
 
@@ -204,6 +194,24 @@ cyber-risk-intelligence-lakehouse/
 │   ├── smoke_test_api.py
 │   └── validate_terraform_template.py
 │
+├── src/
+│   └── cyber_risk/
+│       ├── config.py
+│       ├── etl/
+│       │   ├── spark_session.py
+│       │   ├── build_silver_tables.py
+│       │   └── build_gold_tables.py
+│       ├── ingestion/
+│       │   ├── http_client.py
+│       │   ├── download_kev.py
+│       │   ├── download_epss.py
+│       │   └── download_nvd_recent.py
+│       └── quality/
+│           └── validate_gold_tables.py
+│
+├── tests/
+│   └── test_remediation_copilot.py
+│
 ├── .github/
 │   └── workflows/
 │       ├── python-ci.yml
@@ -219,15 +227,15 @@ cyber-risk-intelligence-lakehouse/
 └── README.md
 ```
 
+`src/cyber_risk` is the actual core package — Spark session setup, the Bronze→Silver→Gold ETL, the ingestion clients for KEV/EPSS/NVD, and the Gold-layer data quality checks all live here. Everything under `scripts/` is a thin CLI wrapper that calls into it.
+
 ---
 
 ## Lakehouse Layers
 
 ### Bronze Layer
 
-The Bronze layer stores raw ingested cyber risk data from public sources.
-
-Typical inputs:
+Raw ingested data, straight from the three sources above:
 
 - CISA KEV records
 - EPSS vulnerability scoring data
@@ -235,9 +243,7 @@ Typical inputs:
 
 ### Silver Layer
 
-The Silver layer cleans, normalises, and prepares records for analytics.
-
-Typical transformations:
+Cleaned and normalised for analytics:
 
 - Standardised CVE IDs
 - Normalised CVSS fields
@@ -248,9 +254,7 @@ Typical transformations:
 
 ### Gold Layer
 
-The Gold layer produces analytics-ready datasets.
-
-Gold outputs include:
+Analytics-ready tables:
 
 - `vulnerability_priority`
 - `vendor_risk_summary`
@@ -261,9 +265,7 @@ Gold outputs include:
 
 ## Data Quality Validation
 
-The project includes automated validation for the Gold lakehouse outputs.
-
-Validation checks include:
+Automated checks on the Gold outputs before anything downstream trusts them:
 
 - Required columns exist
 - CVE IDs are not missing
@@ -275,7 +277,7 @@ Validation checks include:
 - Known exploited flags are binary
 - Vendor risk summary tables contain required fields
 
-Run validation:
+Run it:
 
 ```powershell
 python .\scripts\validate_lakehouse.py
@@ -294,9 +296,7 @@ Data quality validation completed successfully.
 
 ## dbt Analytics Layer
 
-The dbt layer builds staging and mart models on top of a DuckDB analytics database.
-
-### dbt Models
+Staging and mart models on top of a DuckDB analytics database.
 
 Staging models:
 
@@ -336,32 +336,13 @@ dbt docs serve
 
 ## Machine Learning: Exploitation-Likelihood Classifier
 
-The ML component trains a classifier that predicts whether a CVE is likely
-to become a **CISA Known Exploited Vulnerability (KEV)** entry, using only
-metadata available at CVE publication time.
+This model predicts whether a CVE is likely to end up on CISA's Known Exploited Vulnerabilities (KEV) list, using only metadata that's available at the time the CVE is published.
 
-### A design note on target leakage (and why the target changed)
+### Why the target changed (a leakage bug I caught and fixed)
 
-An earlier version of this model predicted `priority_level`, a label
-computed in the ETL layer as a fixed linear combination of CVSS score,
-EPSS percentile, and a handful of CVSS vector fields, thresholded into
-four bands (see `src/cyber_risk/etl/build_gold_tables.py`). Those exact
-same fields were also being used as the model's training features. That
-meant the "classifier" wasn't learning anything from the data -- it was
-using 300 decision trees to re-derive a formula it already had every
-input to compute directly, which is why accuracy came out around **98.6%**
-(reported below, kept here deliberately as a worked example of the
-problem, not a result to be proud of).
+The first version of this model predicted `priority_level` — a label I computed in the ETL layer as a fixed formula combining CVSS score, EPSS percentile, and a few CVSS vector fields (see `src/cyber_risk/etl/build_gold_tables.py`). The problem: those exact same fields were also the model's training features. So the "classifier" wasn't learning anything — it was just using 300 decision trees to reverse-engineer a formula it already had all the inputs for. That's why accuracy came out at 98.6% (still shown below, kept there on purpose as an example of the bug, not as a result to brag about).
 
-The fix: predict `is_known_exploited` instead. Unlike `priority_level`,
-KEV membership is a genuinely independent, forward-looking label --
-CISA adds a CVE to the list only after real-world exploitation is
-observed, which has nothing to do with how the CVSS/EPSS fields were
-combined in this project's own ETL code. `epss_score` / `epss_percentile`
-are also excluded from the features: EPSS is itself a model for the same
-question, so using its output as an input feature would just be
-re-packaging someone else's prediction rather than a genuine independent
-signal.
+The fix was to predict `is_known_exploited` instead. KEV membership is a genuinely independent label — CISA only adds a CVE after real exploitation shows up in the wild, which has nothing to do with how I combined CVSS/EPSS in my own ETL code. I also dropped `epss_score` / `epss_percentile` from the features, since EPSS is itself a prediction for basically the same question, so using it as an input would just be reusing someone else's answer.
 
 ### Target
 
@@ -371,8 +352,7 @@ is_known_exploited: 0 (not in KEV)  |  1 (in KEV)
 
 ### Features
 
-Deliberately limited to information available at CVE publication time,
-before anyone knows whether the vulnerability will be exploited:
+Limited to what's known at publication time, before anyone knows whether the CVE will actually get exploited:
 
 - `cvss_base_score`
 - `cvss_base_severity`
@@ -385,40 +365,18 @@ before anyone knows whether the vulnerability will be exploited:
 - `affected_entry_count`
 - `published_month`
 
-`risk_score`, `priority_level`, `epss_score`, and `epss_percentile` are
-intentionally **not** used as features -- see the note above.
+`risk_score`, `priority_level`, `epss_score`, and `epss_percentile` are left out on purpose — see above.
 
 ### Current Model Metrics
 
-KEV membership is rare (most CVEs are never observed being exploited), so
-the headline number here is `cv_roc_auc_out_of_fold`, not plain `accuracy`.
-A model that always predicts "not exploited" already scores close to
-`baseline_accuracy_always_majority_class` without learning anything, and a
-single train/test split only holds a handful of positive examples in the
-test set -- across two actual pipeline runs, single-split `roc_auc` swung
-from 0.47 to 0.75 purely depending on which positives landed in that split.
-`cv_roc_auc_out_of_fold` comes from 5-fold stratified cross-validation and
-pools out-of-fold predictions across every known-exploited CVE in the full
-dataset instead, and has stayed in the 0.79-0.80 range across both runs so
-far -- that's the one worth trusting.
+KEV membership is rare, so the number that actually matters here is `cv_roc_auc_out_of_fold`, not plain accuracy. A model that just always predicts "not exploited" already scores close to `baseline_accuracy_always_majority_class` without learning anything, and a single train/test split only has a handful of positive examples in the test set — across two runs, single-split `roc_auc` swung from 0.47 to 0.75 depending purely on which positives happened to land in the test set. `cv_roc_auc_out_of_fold` comes from 5-fold stratified cross-validation and pools out-of-fold predictions across every known-exploited CVE in the dataset, and it's stayed around 0.79–0.80 across both runs. That's the number I trust.
 
-Two other things reported alongside the classification metrics:
+I also report two things beyond the usual classification metrics:
 
-- `precision_at_k` / `recall_at_k` (K = 10, 20, 50): of the top-K CVEs
-  ranked by predicted probability, how many are actually known-exploited.
-  This model's real use case is ranking a review queue, not a single
-  yes/no call, so precision@K matches that use case better than a global
-  metric like average precision does.
-- `tuned_threshold`: the probability cutoff that maximises F1 on the
-  out-of-fold predictions, used by the `/predict-exploitation-likelihood`
-  API endpoint instead of the sklearn default of 0.5 (see
-  `ml/train_priority_model.py` and `api/main.py::load_decision_threshold`).
-  With only 15 positive examples total, treat this as a reasonable
-  starting point, not a precisely optimised number -- it can move on the
-  next ingestion run.
+- `precision_at_k` / `recall_at_k` (K = 10, 20, 50): of the top-K CVEs ranked by predicted probability, how many are actually known-exploited. The real use case for this model is ranking a review queue, not making a single yes/no call, so precision@K fits that better than a global metric like average precision.
+- `tuned_threshold`: the probability cutoff that maximises F1 on the out-of-fold predictions, used by `/predict-exploitation-likelihood` instead of the default 0.5 (see `ml/train_priority_model.py` and `api/main.py::load_decision_threshold`). With only 15 positive examples total, I'd treat this as a starting point rather than a precisely tuned number — it can move on the next retrain.
 
-Run the ML workflow and copy the real numbers from
-`reports/model_metrics.json` into the block below:
+Run the ML workflow and copy the real numbers from `reports/model_metrics.json` into the block below:
 
 ```powershell
 python .\scripts\run_ml.py
@@ -454,48 +412,17 @@ python .\scripts\run_ml.py
 }
 ```
 
-Only 15 of 11,506 CVEs in this training set are known-exploited (0.13%), so
-average precision stays low even alongside a decent ROC-AUC -- at this base
-rate a well-ranking model still produces many false positives for every
-true positive it flags.
+Only 15 of 11,506 CVEs in this training set are known-exploited (0.13%), so average precision stays low even with a decent ROC-AUC — at this base rate, a model that ranks well still produces a lot of false positives for every true positive it flags.
 
-`precision_at_10/20/50` coming out at exactly 0.0 in this run is a real,
-checked result, not a bug -- and it's the most honest finding in this whole
-section. Looking at the out-of-fold ranks directly: the best-placed
-known-exploited CVE in this run landed at rank ~190 out of 11,506 (top ~2%,
-genuinely better than random), but every one of the top ~190 spots was
-taken by a CRITICAL-severity, CVSS 9.3-9.8 CVE that was **never** exploited.
-CVSS/CWE metadata alone can flag "this looks dangerous," but a few hundred
-other CVEs look equally dangerous by that same metadata and weren't
-exploited -- there's nothing in this feature set to break that tie. That's
-also exactly the gap a behavioural signal like EPSS is built to fill
-(threat-intel chatter, public PoC availability, actual attacker interest),
-which is precisely why EPSS is excluded as a feature here rather than
-reused (see the target-leakage note above) -- this model and EPSS are
-answering a related but different question, and this result is a concrete
-illustration of the ceiling that static CVSS/CWE metadata runs into on its
-own. Read this model as a broad risk-scoring signal, not a precise "top N
-to review" tool, until it's paired with a behavioural signal or richer
-features (e.g. text from the CVE description or vendor advisories).
+`precision_at_10/20/50` landing at exactly 0.0 in this run is a real result, not a bug, and it's probably the most useful finding in this section. Looking at the out-of-fold ranks directly: the best-ranked known-exploited CVE landed at ~190 out of 11,506 (top 2%, genuinely better than random), but every one of the ~190 spots ahead of it was a CRITICAL-severity, CVSS 9.3–9.8 CVE that was never exploited. CVSS/CWE metadata can flag "this looks dangerous," but a few hundred other CVEs look just as dangerous by the same metadata and weren't exploited — nothing in this feature set breaks that tie. That's exactly the gap a behavioural signal like EPSS is built to fill (threat-intel chatter, public PoC availability, actual attacker interest), which is also why I excluded EPSS as a feature rather than reusing it (see the leakage note above). Right now I'd treat this model as a broad risk-scoring signal rather than a precise "top N to review" tool, until it's paired with a behavioural signal or richer features like CVE description text.
 
-Note: `reports/data_quality_report.csv` and the raw
-`data/gold/vulnerability_priority` parquet can show a different row count
-than the training-set figures above -- that's expected, not a bug: rows
-missing a required feature (e.g. no CVSS score yet) get dropped before
-training. What should NOT drift independently is `data_quality_report.csv`
-vs the Gold parquet row count themselves -- re-run the full pipeline
-(`python .\scripts\run_pipeline.py` then `python .\scripts\run_ml.py`) in
-one sitting before quoting any of these numbers together (e.g. in an
-interview or on a resume), so they all reflect the same ingestion
-snapshot.
+One more note: `reports/data_quality_report.csv` and the raw `data/gold/vulnerability_priority` parquet can show a different row count than the training-set numbers above. That's expected — rows missing a required feature (e.g. no CVSS score yet) get dropped before training. What shouldn't happen is `data_quality_report.csv` and the Gold parquet row count drifting from each other; if you're quoting any of these numbers together (in an interview, on a resume), re-run the full pipeline (`run_pipeline.py` then `run_ml.py`) in one sitting first so they all come from the same ingestion snapshot.
 
 ---
 
 ## MLflow Tracking
 
-The ML workflow logs experiment metadata with MLflow.
-
-Tracked outputs include:
+Logs experiment metadata for every ML run:
 
 - Model metrics
 - Classifier configuration
@@ -503,13 +430,13 @@ Tracked outputs include:
 - Feature importance
 - SHAP explainability outputs
 
-MLflow artifacts are stored locally and excluded from Git where appropriate.
+Artifacts are stored locally and excluded from Git where appropriate.
 
 ---
 
 ## Model Explainability with SHAP
 
-The project includes two explainability outputs:
+Two explainability outputs:
 
 ```text
 reports/feature_importance.png
@@ -520,34 +447,28 @@ reports/shap_feature_importance.png
 
 ![Feature Importance](reports/feature_importance.png)
 
-The feature importance plot shows which input variables the classifier uses most often to split and classify vulnerabilities.
+Shows which input variables the classifier actually splits on most.
 
 ### SHAP Feature Importance
 
 ![SHAP Feature Importance](reports/shap_feature_importance.png)
 
-The SHAP plot explains which features have the strongest average impact on model predictions.
-
-Important features include (from `reports/shap_feature_importance.png`, regenerated after the target-leakage fix below). The exact ranking shifts a little between pipeline runs, because ingestion only pulls a rolling 30-day NVD window each time (see 'Limitations' below) -- as of the most recent run:
+Shows which features have the strongest average impact on the model's predictions. The ranking shifts a bit between runs, since ingestion only pulls a rolling 30-day NVD window each time (see Limitations) — as of the most recent run, the top features are:
 
 - CVSS base score
 - Reference count
 - CVSS severity (medium / critical / high)
 - Privileges required (none / low)
 - User interaction (none)
-- Publication month -- worth calling out on its own: this feature being predictive at all is partly an artifact of the narrow ingestion window (very recently published CVEs haven't had time to be confirmed exploited yet), not a genuine causal signal. See 'Limitations' below.
+- Publication month — this one's worth flagging on its own: it's predictive partly because very recently published CVEs haven't had time to be confirmed exploited yet, not because publication month causes anything. See Limitations.
 
-CWE category (e.g. CWE-78 command injection, CWE-94 code injection) also
-ranks highly on the RandomForest's own impurity-based `reports/feature_importance.csv`,
-though it moves in and out of the SHAP top 10 between runs.
+CWE category (e.g. CWE-78 command injection, CWE-94 code injection) also ranks highly on the RandomForest's own impurity-based `reports/feature_importance.csv`, though it moves in and out of the SHAP top 10 between runs.
 
-Note: `is_known_exploited` (the CISA KEV flag) is the model's **target**, not a feature -- it is deliberately excluded from the training feature set to avoid target leakage (see 'A design note on target leakage' above), so it will never appear in this list.
+Note: `is_known_exploited` (the KEV flag) is the model's target, not a feature — it's excluded from training to avoid the leakage bug described above, so it will never show up in this list.
 
 ---
 
 ## FastAPI Risk Intelligence API
-
-The project exposes cyber risk intelligence through FastAPI.
 
 ### Local API URL
 
@@ -573,7 +494,7 @@ Start the API locally:
 python .\scripts\run_api.py
 ```
 
-The script starts FastAPI on port `8001` by default.
+Runs on port `8001` by default.
 
 ---
 
@@ -627,10 +548,7 @@ Invoke-RestMethod "http://127.0.0.1:8001/vulnerabilities/CVE-2016-20068"
 
 ### Exploitation-Likelihood Prediction
 
-Note there is no `is_known_exploited`, `epss_score`, or `epss_percentile`
-in the request body -- those are the target and the leakage-prone fields
-excluded from the model. See "Machine Learning: Exploitation-Likelihood
-Classifier" above.
+Note there's no `is_known_exploited`, `epss_score`, or `epss_percentile` in the request body — those are the target and the leakage-prone fields I excluded from the model (see the ML section above).
 
 ```powershell
 $body = @{
@@ -658,11 +576,9 @@ ConvertTo-Json -Depth 5
 
 ## RAG Remediation Copilot
 
-The project includes a local retrieval-based remediation copilot.
+A local retrieval-based remediation copilot — no external LLM API key needed.
 
-It does not require an external LLM API key.
-
-The copilot retrieves defensive guidance from a local remediation knowledge base and generates context-aware remediation plans using:
+It retrieves defensive guidance from a local knowledge base and builds a context-aware remediation plan from:
 
 - CVE metadata
 - CVSS severity
@@ -706,9 +622,7 @@ safety_note
 
 ### Security-Safe Behaviour
 
-The copilot is designed for defensive remediation guidance only.
-
-It does not provide:
+Defensive remediation guidance only. It does not provide:
 
 - Exploit instructions
 - Offensive payloads
@@ -719,42 +633,19 @@ It does not provide:
 
 ## Copilot Evaluation
 
-The evaluation script checks the copilot on two different levels:
-`pass_rate` (did it run and return something) and `mean_quality_score`
-(does what it returned actually reflect this specific CVE).
+The evaluation script checks the copilot on two levels: `pass_rate` (did it run and return something) and `mean_quality_score` (does what it returned actually reflect this specific CVE).
 
-`pass_rate` only checks that the copilot found the CVE and returned a
-non-empty actions list, source list, safety note, and priority explanation.
-Because `build_context_aware_actions` always appends a set of
-urgency-appropriate baseline actions regardless of which CVE is queried, a
-100% pass rate mostly just confirms the pipeline runs end-to-end without
-crashing -- it's a completeness/smoke check, not a quality measure.
+`pass_rate` only checks that the copilot found the CVE and returned a non-empty actions list, source list, safety note, and priority explanation. Because `build_context_aware_actions` always appends a set of baseline actions regardless of which CVE is queried, a 100% pass rate mostly just means the pipeline runs end-to-end without crashing — it's a smoke test, not a quality measure. I used to report this number alone, which was misleading, so I added the second metric below.
 
-`mean_quality_score` is a rougher but more useful signal, averaged per case
-from three checks (only counting the ones that actually apply to that
-case):
+`mean_quality_score` is rougher but more useful, averaged per case from three checks (only counting the ones that apply to that case):
 
-- `has_cwe_specific_guidance` -- did the actions include anything beyond
-  the fixed baseline (only possible for the 4 CWEs currently mapped in
-  `CWE_ACTIONS`; a case whose CWE has no mapping isn't counted against
-  this, since the copilot has no way to fill that gap yet)
-- `has_relevant_retrieval` -- did the RAG step actually find a
-  knowledge-base doc with real vocabulary overlap (cosine similarity
-  >= 0.05), rather than just returning its highest-scoring doc regardless
-  of how weak that match is
-- `has_context_appropriate_source` -- for known-exploited or
-  Emergency-urgency CVEs, did retrieval surface the specific doc that
-  `filter_documents_for_context` is designed to prioritise for that
-  situation (`cisa_kev_remediation.md` / `emergency_response.md`)
+- `has_cwe_specific_guidance` — did the actions go beyond the fixed baseline (only possible for the 4 CWEs currently mapped in `CWE_ACTIONS`; a case with an unmapped CWE isn't counted against this, since the copilot has no way to fill that gap yet)
+- `has_relevant_retrieval` — did the RAG step find a knowledge-base doc with real vocabulary overlap (cosine similarity ≥ 0.05), rather than just returning its highest-scoring doc regardless of how weak the match is
+- `has_context_appropriate_source` — for known-exploited or Emergency-urgency CVEs, did retrieval surface the specific doc `filter_documents_for_context` is supposed to prioritise for that situation (`cisa_kev_remediation.md` / `emergency_response.md`)
 
-This is still a heuristic, not human-graded ground truth: it checks that
-the system behaved the way it's designed to, not that the remediation
-advice is genuinely good. A real quality bar would need manual grading or
-an LLM-as-judge step -- listed under Future Improvements.
+This is still a heuristic, not human-graded ground truth — it checks that the system behaved the way it's designed to, not that the remediation advice is actually good. A real quality bar would need manual grading or an LLM-as-judge step, listed under Future Improvements.
 
-Run evaluation (this writes the real numbers to
-`reports/copilot_eval_summary.json` -- copy them from there rather than
-from the illustrative shape below):
+Run evaluation (writes the real numbers to `reports/copilot_eval_summary.json` — use those, not the placeholder shape below):
 
 ```powershell
 python .\scripts\evaluate_copilot.py
@@ -788,9 +679,7 @@ reports/copilot_eval_summary.json
 
 ## API Monitoring and Observability
 
-Phase 6 adds lightweight API monitoring.
-
-The FastAPI middleware records:
+Lightweight FastAPI middleware that records:
 
 - Timestamp
 - HTTP method
@@ -799,13 +688,11 @@ The FastAPI middleware records:
 - Response time
 - Client host
 
-Runtime log:
+Runtime log (excluded from Git):
 
 ```text
 monitoring/api_usage_log.csv
 ```
-
-This runtime log is excluded from Git.
 
 ### Metrics Endpoint
 
@@ -844,7 +731,7 @@ reports/api_monitoring_summary.json
 
 ## Docker Deployment Readiness
 
-Phase 7 adds Docker support for the FastAPI risk intelligence service.
+Docker support for the FastAPI service.
 
 ### Docker Files
 
@@ -859,9 +746,7 @@ scripts/smoke_test_api.py
 
 ### Port Mapping
 
-The container runs FastAPI internally on port `8000`.
-
-The local machine accesses the container through port `8001`.
+The container runs FastAPI internally on port `8000`; the local machine reaches it through port `8001`.
 
 ```text
 Local machine: http://127.0.0.1:8001
@@ -929,11 +814,7 @@ docker compose down
 
 ## AWS Terraform Architecture Template
 
-Phase 8 adds an AWS infrastructure-as-code template.
-
-This phase is designed as a **cloud architecture and Terraform validation layer**.
-
-It does not require running paid AWS resources during local development.
+This phase is a cloud architecture and Terraform validation layer — it doesn't run paid AWS resources during local development.
 
 Do not run `terraform apply` unless you understand the AWS resources and possible costs.
 
@@ -957,8 +838,6 @@ infrastructure/aws/
 ```
 
 ### AWS Architecture Covered
-
-The Terraform template defines:
 
 - VPC
 - Public subnets
@@ -1010,7 +889,7 @@ Success! The configuration is valid.
 
 ### Python Template Validation
 
-If Terraform is not installed locally, validate the template structure with Python:
+If Terraform isn't installed locally, validate the template structure with Python instead:
 
 ```powershell
 python .\scripts\validate_terraform_template.py
@@ -1024,34 +903,23 @@ Terraform template validation completed successfully.
 
 ### Terraform CI
 
-The repository includes:
-
 ```text
 .github/workflows/terraform-validate.yml
 ```
 
-The workflow runs:
-
-- `terraform fmt -check -recursive`
-- `terraform init -backend=false`
-- `terraform validate`
-
-This validates the infrastructure template on GitHub Actions without applying resources.
+Runs `terraform fmt -check -recursive`, `terraform init -backend=false`, and `terraform validate` on GitHub Actions, without applying anything.
 
 ---
 
 ## Streamlit Dashboard
 
-The project also includes a Streamlit dashboard for cyber risk exploration.
+A Streamlit dashboard for exploring the cyber risk data.
 
 👉 [Open the live dashboard](https://cyber-risk-intelligence-momo.streamlit.app)
 
-The deployed dashboard reads a small, git-committed snapshot of the Gold layer
-(`app/data/gold/`, produced by `scripts/prepare_dashboard_data.py`) rather than
-the full local lakehouse, since Streamlit Community Cloud has no Spark/JVM
-runtime to rebuild it. See that script's docstring for details.
+The deployed dashboard reads a small, git-committed snapshot of the Gold layer (`app/data/gold/`, produced by `scripts/prepare_dashboard_data.py`), not the full local lakehouse, since Streamlit Community Cloud doesn't have a Spark/JVM runtime to rebuild it. See that script's docstring for details.
 
-Run locally instead:
+Run it locally instead:
 
 ```powershell
 python -m streamlit run app\dashboard.py
@@ -1069,22 +937,11 @@ Dashboard screenshots:
 
 ## One-Command Pipeline
 
-Run the full local pipeline:
-
 ```powershell
 python .\scripts\run_pipeline.py
 ```
 
-The pipeline executes:
-
-```text
-Bronze ingestion
-→ Build Silver tables
-→ Build Gold tables
-→ Validate Gold tables
-→ Build dbt analytics marts
-→ Inspect lakehouse outputs
-```
+Runs: Bronze ingestion → build Silver tables → build Gold tables → validate Gold tables → build dbt analytics marts → inspect lakehouse outputs.
 
 ---
 
@@ -1112,16 +969,11 @@ python -m pip install -r requirements.txt
 python -m pip install -e .
 ```
 
-The last line installs this repository's own `src/cyber_risk` package in editable mode.
-Without it, scripts that do `from cyber_risk...` (e.g. `scripts/run_ingestion.py`) fail with
-`ModuleNotFoundError: No module named 'cyber_risk'` -- CI already does this install step (see
-`.github/workflows/python-ci.yml`), this just brings local setup in line with it.
+That last line installs this repo's own `src/cyber_risk` package in editable mode. Skip it and scripts that do `from cyber_risk...` (e.g. `scripts/run_ingestion.py`) fail with `ModuleNotFoundError: No module named 'cyber_risk'`. CI already runs this install step (see `.github/workflows/python-ci.yml`) — this just brings local setup in line with it.
 
 ### 4. Configure Hadoop on Windows
 
-PySpark on Windows may require `winutils.exe`.
-
-Example configuration:
+PySpark on Windows may need `winutils.exe`.
 
 ```powershell
 $env:HADOOP_HOME = "C:\hadoop"
@@ -1232,134 +1084,75 @@ python .\scripts\validate_terraform_template.py
 
 ## CI/CD
 
-The repository includes GitHub Actions workflows for:
+GitHub Actions workflows for:
 
-- Python CI
-- Docker Build CI
-- Terraform Validate CI
-
-The Python CI validates the core project workflow.
-
-The Docker Build workflow validates that the FastAPI service can be containerised successfully.
-
-The Terraform Validate workflow validates the AWS infrastructure template without creating cloud resources.
+- Python CI — validates the core project workflow
+- Docker Build CI — validates the FastAPI service containerises successfully
+- Terraform Validate CI — validates the AWS infrastructure template without creating cloud resources
 
 ---
 
 ## Portfolio Value
 
-This project demonstrates:
+Skills this project touches:
 
 ### Data Engineering
 
-- PySpark ETL
-- Bronze/Silver/Gold lakehouse design
-- Data validation
-- Pipeline automation
+PySpark ETL, Bronze/Silver/Gold lakehouse design, data validation, pipeline automation.
 
 ### Analytics Engineering
 
-- dbt staging and marts
-- DuckDB analytics database
-- SQL transformation layer
-- dbt tests and docs
+dbt staging and marts, DuckDB analytics database, SQL transformation layer, dbt tests and docs.
 
 ### Machine Learning
 
-- Feature engineering
-- Leakage-aware target design (see "Machine Learning: Exploitation-Likelihood
-  Classifier" above for a worked example of catching and fixing a
-  label-leakage bug, not just avoiding it from the start)
-- Imbalanced binary classification (KEV exploitation likelihood)
-- Evaluation beyond accuracy: ROC-AUC, average precision, majority-class
-  baseline
-- MLflow tracking
+Feature engineering, leakage-aware target design (the target-leakage section above is a real bug I caught and fixed, not just something I avoided from the start), imbalanced binary classification, evaluation beyond accuracy (ROC-AUC, average precision, majority-class baseline), MLflow tracking.
 
 ### Explainable AI
 
-- Feature importance
-- SHAP explainability
-- Model interpretation
+Feature importance, SHAP explainability, model interpretation.
 
 ### AI Engineering
 
-- Retrieval-based remediation copilot
-- Local knowledge base
-- Context-aware recommendation logic
-- Safety-aware defensive responses
+Retrieval-based remediation copilot, local knowledge base, context-aware recommendation logic, safety-aware defensive responses.
 
 ### Backend Engineering
 
-- FastAPI service
-- Swagger documentation
-- REST API endpoints
-- ML inference endpoint
+FastAPI service, Swagger documentation, REST API endpoints, ML inference endpoint.
 
 ### MLOps / Platform Engineering
 
-- API monitoring
-- Runtime logging
-- Metrics endpoint
-- Docker containerisation
-- Docker Compose deployment
-- Docker Build CI
+API monitoring, runtime logging, metrics endpoint, Docker containerisation, Docker Compose deployment, Docker Build CI.
 
 ### Cloud / DevOps
 
-- AWS architecture design
-- Terraform Infrastructure as Code
-- ECS Fargate deployment template
-- ECR container registry template
-- S3 lakehouse storage template
-- CloudWatch monitoring template
-- Terraform validation CI
+AWS architecture design, Terraform IaC, ECS Fargate deployment template, ECR container registry template, S3 lakehouse storage template, CloudWatch monitoring template, Terraform validation CI.
 
 ### Cybersecurity Analytics
 
-- CVE prioritisation
-- CISA KEV enrichment
-- CVSS analysis
-- CWE remediation guidance
-- Defensive vulnerability management
+CVE prioritisation, CISA KEV enrichment, CVSS analysis, CWE remediation guidance, defensive vulnerability management.
 
 ---
 
 ## Limitations
 
-Current limitations:
+Being upfront about what this project doesn't do yet:
 
 - The API uses local DuckDB and local model artifacts.
 - Docker Compose mounts local `analytics/` and `models/` directories.
-- The Terraform template is an architecture template and has not been applied to production AWS.
+- The Terraform template is an architecture design, not something applied to production AWS.
 - The RAG copilot uses a local knowledge base rather than a production vector database.
 - EPSS values may be missing depending on available source data.
-- The exploitation-likelihood model predicts KEV membership, which is
-  itself an imperfect and delayed proxy for real-world exploitation --
-  a CVE can be actively exploited before CISA adds it to KEV, so the
-  model's positive labels lag reality somewhat.
-- The classifier does not use text features (e.g. CVE description, NLP on
-  vendor advisories), which likely carry additional predictive signal
-  beyond the structured CVSS/CWE fields currently used.
-- NVD ingestion only pulls the last 30 days of published CVEs per run (see
-  'Data Sources' above), so the committed Gold dataset spans a narrow date
-  range rather than NVD's full history. Two concrete effects: (1) the
-  `monthly_vulnerability_trends` output has too few distinct months to show
-  a real trend, it is closer to a single snapshot than a time series; and
-  (2) the already-low KEV positive rate is partly inflated by
-  right-censoring -- most CVEs in the dataset were published too recently
-  for CISA to have confirmed real-world exploitation yet, which is a
-  different problem from "exploited CVEs are simply rare" and would need a
-  longer NVD history (or an older, fixed publication-date cutoff) to
-  measure separately.
-- Current local deployment uses Docker Compose rather than a hosted cloud service.
-- Only 15 of 11,506 CVEs in the current training set are known-exploited (0.13%). Cross-validated ROC-AUC (~0.79) shows the model separates known-exploited CVEs from the bulk of the dataset better than chance, but precision@10/20/50 come out at 0.0 in the current run -- the best-ranked known-exploited CVE lands around rank ~190 of 11,506, behind roughly 190 CRITICAL-severity, high-CVSS CVEs that were never exploited (see 'Current Model Metrics' above for the full breakdown). In plain terms: CVSS/CWE metadata alone can flag "this looks dangerous" but can't reliably pick out which of several similarly-dangerous-looking CVEs actually gets exploited -- that needs a behavioural signal like EPSS, which this project deliberately doesn't reuse as a feature. Treat this as a broad risk-scoring signal, not a precise top-N triage tool, and the F1-tuned decision threshold the API uses can shift meaningfully on the next retrain.
-- The copilot's `mean_quality_score` (see 'Copilot Evaluation' above) checks that retrieval and CWE-mapping behaved the way they're designed to, not that the remediation advice is actually good guidance -- there's no human-graded or LLM-graded quality baseline yet.
+- The exploitation-likelihood model predicts KEV membership, which is itself an imperfect, delayed proxy for real-world exploitation — a CVE can be actively exploited before CISA adds it to KEV, so the positive labels lag reality somewhat.
+- The classifier doesn't use text features (CVE description, NLP on vendor advisories), which likely carry more signal than the structured CVSS/CWE fields alone.
+- NVD ingestion only pulls the last 30 days of published CVEs per run (see Data Sources above), so the committed Gold dataset spans a narrow date range rather than NVD's full history. Two effects from that: (1) `monthly_vulnerability_trends` doesn't have enough distinct months to show a real trend — it's closer to a snapshot than a time series; and (2) the already-low KEV positive rate is partly inflated because most CVEs here were published too recently for CISA to have confirmed exploitation yet. That's a different problem from "exploited CVEs are just rare," and separating the two would need a longer NVD history.
+- Current local deployment uses Docker Compose, not a hosted cloud service.
+- Only 15 of 11,506 CVEs in the training set are known-exploited (0.13%). Cross-validated ROC-AUC (~0.79) shows the model separates known-exploited CVEs from the rest better than chance, but precision@10/20/50 come out at 0.0 in the current run — the best-ranked known-exploited CVE sits around rank 190 of 11,506, behind roughly 190 CRITICAL-severity, high-CVSS CVEs that were never exploited (full breakdown under Current Model Metrics above). In plain terms: CVSS/CWE metadata alone can flag "this looks dangerous" but can't reliably pick out which of several similarly-dangerous-looking CVEs actually gets exploited — that needs a behavioural signal like EPSS, which this project deliberately doesn't reuse as a feature. Treat this as a broad risk-scoring signal, not a precise top-N triage tool, and expect the F1-tuned decision threshold to shift on the next retrain.
+- The copilot's `mean_quality_score` (see Copilot Evaluation above) checks that retrieval and CWE-mapping behaved as designed, not that the remediation advice is actually good — there's no human-graded or LLM-graded quality baseline yet.
 
 ---
 
 ## Future Improvements
-
-Planned next steps:
 
 - Push Docker image to ECR
 - Add AWS deployment pipeline
