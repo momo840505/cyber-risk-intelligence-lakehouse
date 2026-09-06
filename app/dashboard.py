@@ -214,7 +214,8 @@ st.markdown(
 )
 
 st.caption(
-    "Data model: Gold vulnerability priority, vendor risk summary, monthly vulnerability trends, and CWE risk summary tables."
+    "Dashboard source: committed Gold snapshot generated from the PySpark Gold layer. "
+    "Charts are recalculated from the filtered vulnerability-level snapshot."
 )
 
 if SNAPSHOT_METADATA_PATH.exists():
@@ -463,27 +464,37 @@ with trend_col:
             + monthly_chart_data["published_month"].astype(str).str.zfill(2)
         )
 
-        # Mark the latest source month as partial when the snapshot does not
-        # contain a full calendar month. This prevents the final point from
-        # looking like a real month-over-month collapse.
+        # The committed snapshot can start or end part-way through a calendar
+        # month. Mark those boundary months explicitly so the chart is not
+        # interpreted as a complete month-over-month comparison.
         if "published_date" in vulnerability_priority.columns:
             source_dates = pd.to_datetime(
                 vulnerability_priority["published_date"],
                 errors="coerce",
-            )
+            ).dropna()
 
-            latest_source_date = source_dates.max()
+            if not source_dates.empty:
+                first_source_date = source_dates.min()
+                latest_source_date = source_dates.max()
 
-            if pd.notna(latest_source_date):
+                partial_periods = set()
+
+                if first_source_date.day > 1:
+                    partial_periods.add(
+                        (int(first_source_date.year), int(first_source_date.month))
+                    )
+
                 latest_month_end = latest_source_date + pd.offsets.MonthEnd(0)
 
                 if latest_source_date.normalize() < latest_month_end.normalize():
-                    latest_year = int(latest_source_date.year)
-                    latest_month = int(latest_source_date.month)
+                    partial_periods.add(
+                        (int(latest_source_date.year), int(latest_source_date.month))
+                    )
 
+                for partial_year, partial_month in sorted(partial_periods):
                     partial_mask = (
-                        monthly_chart_data["published_year"].eq(latest_year)
-                        & monthly_chart_data["published_month"].eq(latest_month)
+                        monthly_chart_data["published_year"].eq(partial_year)
+                        & monthly_chart_data["published_month"].eq(partial_month)
                     )
 
                     monthly_chart_data.loc[

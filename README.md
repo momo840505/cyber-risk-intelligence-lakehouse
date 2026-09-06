@@ -16,17 +16,27 @@ flowchart LR
     A[CISA KEV] --> D[Bronze]
     B[FIRST EPSS] --> D
     C[NVD] --> D
+
     D --> E[PySpark Silver]
     E --> F[PySpark Gold]
+
     F --> G[Data quality checks]
-    F --> H[DuckDB]
+    G --> H[DuckDB]
+
     H --> I[dbt staging + marts]
-    I --> J[FastAPI]
-    I --> K[Streamlit]
-    I --> L[Model training]
-    I --> M[Remediation retrieval]
-    L --> J
-    M --> J
+
+    H --> J[Model training]
+    I --> J
+    J --> K[KEV horizon model]
+
+    I --> L[Remediation retrieval]
+
+    I --> M[FastAPI]
+    K --> M
+    L --> M
+
+    F --> N[Dashboard snapshot]
+    N --> O[Streamlit]
 ```
 
 For AWS, the container and runtime artifacts are separated: the image is stored in ECR, the DuckDB/model/metrics files are stored in S3, and ECS downloads the configured artifact versions at task startup. The ALB only marks a task ready after the database can be queried and the model can be loaded.
