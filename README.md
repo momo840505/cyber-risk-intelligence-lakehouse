@@ -21,15 +21,16 @@ flowchart LR
     E --> F[PySpark Gold]
 
     F --> G[Data quality checks]
-    G --> H[DuckDB]
+    G --> H[DuckDB raw tables]
 
-    H --> I[dbt staging + marts]
+    H --> I[dbt staging + marts in DuckDB]
 
     H --> J[Model training]
     I --> J
     J --> K[KEV horizon model]
 
-    I --> L[Remediation retrieval]
+    I --> L[Remediation engine]
+    Q[Local knowledge base] --> L
 
     I --> M[FastAPI]
     K --> M
