@@ -14,23 +14,28 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Build Docker image
+      - name: Build image
         run: docker build -t cyber-risk-intelligence-api:ci .
 
-      - name: Run image and check it actually starts
+      - name: Start container
+        run: docker run -d --name ci-smoke -p 8000:8000 cyber-risk-intelligence-api:ci
+
+      - name: Check liveness
         run: |
-          docker run -d --name ci-smoke -p 8000:8000 cyber-risk-intelligence-api:ci
           for i in $(seq 1 10); do
-            if curl -sf http://localhost:8000/health; then
-              echo "Container responded, image is not just building, it runs"
+            if curl -sf http://localhost:8000/livez; then
               exit 0
             fi
-            echo "Waiting for container to come up (attempt $i)..."
             sleep 2
           done
-          echo "Container never responded on /health"
           docker logs ci-smoke
           exit 1
+
+      - name: Confirm readiness fails without artifacts
+        run: |
+          status=$(curl -s -o /tmp/ready.json -w "%{http_code}" http://localhost:8000/readyz)
+          test "$status" = "503"
+          cat /tmp/ready.json
 
       - name: Stop container
         if: always()

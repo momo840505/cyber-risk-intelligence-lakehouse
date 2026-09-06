@@ -110,6 +110,10 @@ def build_vendor_risk_summary(priority: DataFrame) -> DataFrame:
     return (
         priority
         .where(F.col("vendor").isNotNull())
+        .withColumn(
+            "product_name",
+            F.coalesce(F.col("product_name"), F.lit("Unknown")),
+        )
         .groupBy("vendor", "product_name")
         .agg(
             F.countDistinct("cve_id").alias("total_vulnerabilities"),

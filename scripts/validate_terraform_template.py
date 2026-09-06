@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from pathlib import Path
 
 
@@ -25,67 +23,38 @@ REQUIRED_FILES = [
 REQUIRED_KEYWORDS = {
     "versions.tf": ["required_providers", "hashicorp/aws"],
     "networking.tf": ["aws_vpc", "aws_subnet", "aws_internet_gateway"],
-    "security_groups.tf": ["aws_security_group"],
     "storage.tf": ["aws_s3_bucket", "server_side_encryption"],
-    "ecr.tf": ["aws_ecr_repository", "scan_on_push"],
-    "iam.tf": ["aws_iam_role", "AmazonECSTaskExecutionRolePolicy"],
-    "ecs.tf": ["aws_ecs_cluster", "aws_ecs_service", "aws_lb"],
+    "ecr.tf": ["aws_ecr_repository", "IMMUTABLE", "scan_on_push"],
+    "iam.tf": ["aws_iam_role", "s3:GetObject"],
+    "variables.tf": ["health_check_path", "/readyz"],
+    "ecs.tf": ["aws_ecs_cluster", "aws_ecs_service", "ARTIFACT_BUCKET", "health_check_path"],
     "monitoring.tf": ["aws_cloudwatch_dashboard"],
     "outputs.tf": ["api_url", "ecr_repository_url"],
 }
 
-FORBIDDEN_FILES = [
-    "terraform.tfstate",
-    "terraform.tfstate.backup",
-    ".terraform.lock.hcl",
-]
-
-
-def assert_file_exists(path: Path) -> None:
-    if not path.exists():
-        raise FileNotFoundError(f"Missing required file: {path}")
-
-    if path.is_file() and path.stat().st_size == 0:
-        raise ValueError(f"Required file is empty: {path}")
-
-
-def assert_keywords(path: Path, keywords: list[str]) -> None:
-    content = path.read_text(encoding="utf-8")
-
-    missing_keywords = [
-        keyword for keyword in keywords if keyword not in content
-    ]
-
-    if missing_keywords:
-        raise ValueError(
-            f"{path} is missing required keywords: {missing_keywords}"
-        )
+FORBIDDEN_FILES = ["terraform.tfstate", "terraform.tfstate.backup"]
 
 
 def main() -> None:
-    print("\n========== Terraform Template Validation ==========")
-
     if not INFRA_DIR.exists():
         raise FileNotFoundError(f"Infrastructure directory missing: {INFRA_DIR}")
 
     for file_name in REQUIRED_FILES:
         path = INFRA_DIR / file_name
-        assert_file_exists(path)
-        print(f"PASS file exists: {path.relative_to(BASE_DIR)}")
+        if not path.exists() or path.stat().st_size == 0:
+            raise FileNotFoundError(f"Missing or empty required file: {path}")
 
     for file_name, keywords in REQUIRED_KEYWORDS.items():
-        path = INFRA_DIR / file_name
-        assert_keywords(path, keywords)
-        print(f"PASS keywords: {path.relative_to(BASE_DIR)}")
+        content = (INFRA_DIR / file_name).read_text(encoding="utf-8")
+        missing = [keyword for keyword in keywords if keyword not in content]
+        if missing:
+            raise ValueError(f"{file_name} is missing required keywords: {missing}")
 
     for file_name in FORBIDDEN_FILES:
-        path = INFRA_DIR / file_name
-        if path.exists():
-            raise ValueError(
-                f"Do not commit Terraform state or lock files: {path}"
-            )
+        if (INFRA_DIR / file_name).exists():
+            raise ValueError(f"Do not commit Terraform state: {file_name}")
 
-    print("\nTerraform template validation completed successfully.")
+    print("Terraform template validation completed successfully.")
 
 
 if __name__ == "__main__":

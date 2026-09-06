@@ -1,47 +1,59 @@
+import csv
+import gzip
+import io
 import json
 from datetime import datetime, timezone
 
-from cyber_risk.config import EPSS_API_URL, EPSS_BRONZE_DIR, create_project_directories
-from cyber_risk.ingestion.http_client import get_json
+import requests
+
+from cyber_risk.config import EPSS_BRONZE_DIR, create_project_directories
 
 
-def save_jsonl(records: list[dict], output_path) -> None:
-    with output_path.open("w", encoding="utf-8") as file:
-        for record in records:
-            file.write(json.dumps(record, ensure_ascii=False) + "\n")
+EPSS_CURRENT_CSV_URL = "https://epss.empiricalsecurity.com/epss_scores-current.csv.gz"
 
 
-def download_epss_top_scores(limit: int = 5000) -> None:
-    """
-    Download top EPSS scores.
-
-    For the first version, we download top CVEs by EPSS probability.
-    Later, we can replace this with the full daily EPSS CSV file.
-    """
+def download_epss_scores() -> None:
     create_project_directories()
-
     downloaded_at = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 
-    params = {
-        "order": "!epss",
-        "limit": limit,
-    }
+    response = requests.get(EPSS_CURRENT_CSV_URL, timeout=120, allow_redirects=True)
+    response.raise_for_status()
 
-    data = get_json(EPSS_API_URL, params=params)
+    raw_output_path = EPSS_BRONZE_DIR / f"epss_scores_{downloaded_at}.csv.gz"
+    raw_output_path.write_bytes(response.content)
 
-    raw_output_path = EPSS_BRONZE_DIR / f"epss_top_{limit}_{downloaded_at}.json"
+    records = []
+    with gzip.GzipFile(fileobj=io.BytesIO(response.content)) as compressed:
+        with io.TextIOWrapper(compressed, encoding="utf-8") as text_stream:
+            lines = (line for line in text_stream if not line.startswith("#"))
+            reader = csv.DictReader(lines)
+            for row in reader:
+                cve_id = row.get("cve")
+                if not cve_id:
+                    continue
+                records.append(
+                    {
+                        "cve": cve_id,
+                        "epss": row.get("epss"),
+                        "percentile": row.get("percentile"),
+                        "date": datetime.now(timezone.utc).date().isoformat(),
+                    }
+                )
+
     jsonl_output_path = EPSS_BRONZE_DIR / "epss_top_scores.jsonl"
+    with jsonl_output_path.open("w", encoding="utf-8") as file:
+        for record in records:
+            file.write(json.dumps(record) + "\n")
 
-    with raw_output_path.open("w", encoding="utf-8") as file:
-        json.dump(data, file, indent=2, ensure_ascii=False)
-
-    records = data.get("data", [])
-    save_jsonl(records, jsonl_output_path)
-
-    print(f"Downloaded EPSS records: {len(records)}")
+    print(f"Downloaded EPSS records: {len(records):,}")
     print(f"Saved raw file: {raw_output_path}")
     print(f"Saved JSONL file: {jsonl_output_path}")
 
 
+def download_epss_top_scores(limit: int = 5000) -> None:
+    """Compatibility wrapper for older scripts."""
+    download_epss_scores()
+
+
 if __name__ == "__main__":
-    download_epss_top_scores()
+    download_epss_scores()

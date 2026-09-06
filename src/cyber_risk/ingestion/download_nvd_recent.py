@@ -1,10 +1,15 @@
 import json
+import os
 import time
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from cyber_risk.config import NVD_BRONZE_DIR, NVD_CVE_API_URL, create_project_directories
 from cyber_risk.ingestion.http_client import get_json
+
+
+MAX_NVD_RANGE_DAYS = 120
+RESULTS_PER_PAGE = 2000
 
 
 def save_jsonl(records: list[dict[str, Any]], output_path) -> None:
@@ -14,74 +19,78 @@ def save_jsonl(records: list[dict[str, Any]], output_path) -> None:
 
 
 def format_nvd_datetime(value: datetime) -> str:
-    """
-    Format datetime for NVD API.
-
-    Example:
-    2026-07-01T00:00:00.000Z
-    """
     return value.strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
 
-def download_recent_nvd_cves(days_back: int = 30) -> None:
-    """
-    Download recently published CVEs from the NVD API.
+def iter_windows(start_datetime: datetime, end_datetime: datetime):
+    cursor = start_datetime
+    while cursor < end_datetime:
+        window_end = min(cursor + timedelta(days=MAX_NVD_RANGE_DAYS), end_datetime)
+        yield cursor, window_end
+        cursor = window_end + timedelta(milliseconds=1)
 
-    This first version limits the range to the last N days so that
-    the project runs quickly while we are building the pipeline.
-    """
-    create_project_directories()
 
-    end_datetime = datetime.now(timezone.utc)
-    start_datetime = end_datetime - timedelta(days=days_back)
+def download_nvd_range(start_datetime: datetime, end_datetime: datetime) -> list[dict[str, Any]]:
+    records: dict[str, dict[str, Any]] = {}
 
-    downloaded_at = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    for window_start, window_end in iter_windows(start_datetime, end_datetime):
+        start_index = 0
+        while True:
+            params = {
+                "pubStartDate": format_nvd_datetime(window_start),
+                "pubEndDate": format_nvd_datetime(window_end),
+                "resultsPerPage": RESULTS_PER_PAGE,
+                "startIndex": start_index,
+                "noRejected": "",
+            }
+            data = get_json(NVD_CVE_API_URL, params=params)
+            vulnerabilities = data.get("vulnerabilities", [])
+            total_results = int(data.get("totalResults", 0))
 
-    all_vulnerabilities: list[dict[str, Any]] = []
-    start_index = 0
-    results_per_page = 2000
+            for item in vulnerabilities:
+                cve_id = item.get("cve", {}).get("id")
+                if cve_id:
+                    records[cve_id] = item
 
-    while True:
-        params = {
-            "pubStartDate": format_nvd_datetime(start_datetime),
-            "pubEndDate": format_nvd_datetime(end_datetime),
-            "resultsPerPage": results_per_page,
-            "startIndex": start_index,
-            "noRejected": "",
-        }
+            print(
+                f"NVD {window_start.date()} to {window_end.date()}: "
+                f"{min(start_index + len(vulnerabilities), total_results):,}/{total_results:,}"
+            )
 
-        data = get_json(NVD_CVE_API_URL, params=params)
-
-        vulnerabilities = data.get("vulnerabilities", [])
-        total_results = data.get("totalResults", 0)
-
-        all_vulnerabilities.extend(vulnerabilities)
-
-        print(
-            f"Downloaded page starting at {start_index}. "
-            f"Page records: {len(vulnerabilities)}. "
-            f"Total expected: {total_results}."
-        )
-
-        start_index += results_per_page
-
-        if start_index >= total_results:
-            break
+            start_index += RESULTS_PER_PAGE
+            if start_index >= total_results:
+                break
+            time.sleep(6)
 
         time.sleep(6)
 
-    raw_output_path = NVD_BRONZE_DIR / f"nvd_recent_{days_back}_days_{downloaded_at}.json"
+    return list(records.values())
+
+
+def download_recent_nvd_cves(days_back: int | None = None) -> None:
+    create_project_directories()
+
+    if days_back is None:
+        days_back = int(os.getenv("NVD_DAYS_BACK", "730"))
+    if days_back < 1:
+        raise ValueError("days_back must be positive")
+
+    end_datetime = datetime.now(timezone.utc)
+    start_datetime = end_datetime - timedelta(days=days_back)
+    downloaded_at = end_datetime.strftime("%Y%m%dT%H%M%SZ")
+
+    vulnerabilities = download_nvd_range(start_datetime, end_datetime)
+
+    raw_output_path = NVD_BRONZE_DIR / f"nvd_{days_back}_days_{downloaded_at}.json"
     jsonl_output_path = NVD_BRONZE_DIR / "nvd_recent_cves.jsonl"
 
     with raw_output_path.open("w", encoding="utf-8") as file:
-        json.dump(all_vulnerabilities, file, indent=2, ensure_ascii=False)
+        json.dump(vulnerabilities, file, ensure_ascii=False)
 
-    save_jsonl(all_vulnerabilities, jsonl_output_path)
-
-    print(f"Downloaded NVD CVE records: {len(all_vulnerabilities)}")
-    print(f"Saved raw file: {raw_output_path}")
+    save_jsonl(vulnerabilities, jsonl_output_path)
+    print(f"Downloaded NVD CVE records: {len(vulnerabilities):,}")
     print(f"Saved JSONL file: {jsonl_output_path}")
 
 
 if __name__ == "__main__":
-    download_recent_nvd_cves(days_back=30)
+    download_recent_nvd_cves()

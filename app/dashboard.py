@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import json
+
 import pandas as pd
 import plotly.express as px
 import streamlit as st
@@ -27,6 +29,7 @@ BASE_DIR = Path(__file__).resolve().parents[1]
 # output, gitignored). Streamlit Community Cloud only has this repo's committed files to
 # work with -- see scripts/prepare_dashboard_data.py for how the snapshot is produced.
 GOLD_DIR = BASE_DIR / "app" / "data" / "gold"
+SNAPSHOT_METADATA_PATH = GOLD_DIR / "_snapshot_metadata.json"
 
 
 # =========================
@@ -213,6 +216,22 @@ st.markdown(
 st.caption(
     "Data model: Gold vulnerability priority, vendor risk summary, monthly vulnerability trends, and CWE risk summary tables."
 )
+
+if SNAPSHOT_METADATA_PATH.exists():
+    try:
+        snapshot_metadata = json.loads(
+            SNAPSHOT_METADATA_PATH.read_text(encoding="utf-8")
+        )
+        generated_at = snapshot_metadata.get("generated_at_utc", "unknown")
+        date_min = snapshot_metadata.get("published_date_min", "unknown")
+        date_max = snapshot_metadata.get("published_date_max", "unknown")
+
+        st.caption(
+            f"Snapshot generated: {generated_at} | "
+            f"CVE publication range: {date_min} to {date_max}"
+        )
+    except (OSError, ValueError, json.JSONDecodeError):
+        pass
 
 
 # =========================
@@ -408,60 +427,233 @@ st.markdown('<div class="section-header">Trend and Vendor Analysis</div>', unsaf
 trend_col, vendor_col = st.columns(2)
 
 with trend_col:
-    monthly_chart_data = add_month_label(monthly_vulnerability_trends)
+    required_trend_columns = {
+        "published_year",
+        "published_month",
+    }
 
-    if {"month_label", "total_cve_count"}.issubset(monthly_chart_data.columns):
-        monthly_chart_data = monthly_chart_data.sort_values(["published_year", "published_month"])
+    if required_trend_columns.issubset(filtered_vulnerabilities.columns):
+        monthly_chart_data = (
+            filtered_vulnerabilities
+            .dropna(subset=["published_year", "published_month"])
+            .groupby(
+                ["published_year", "published_month"],
+                as_index=False,
+            )
+            .agg(
+                total_cve_count=("cve_id", "count"),
+                known_exploited_count=(
+                    "is_known_exploited",
+                    lambda series: int(series.fillna(0).sum()),
+                ),
+            )
+            .sort_values(["published_year", "published_month"])
+        )
 
-        fig_monthly = px.line(
-            monthly_chart_data,
-            x="month_label",
-            y="total_cve_count",
-            markers=True,
-            title="Monthly Vulnerability Trends",
-            text="total_cve_count",
+        monthly_chart_data["published_year"] = (
+            monthly_chart_data["published_year"].astype(int)
         )
-        fig_monthly.update_layout(
-            xaxis_title="Month",
-            yaxis_title="Total CVEs",
-            height=420,
-            margin=dict(l=20, r=20, t=60, b=40),
-            xaxis_type="category",
+        monthly_chart_data["published_month"] = (
+            monthly_chart_data["published_month"].astype(int)
         )
-        fig_monthly.update_traces(textposition="top center")
-        st.plotly_chart(fig_monthly, use_container_width=True)
+
+        monthly_chart_data["month_label"] = (
+            monthly_chart_data["published_year"].astype(str)
+            + "-"
+            + monthly_chart_data["published_month"].astype(str).str.zfill(2)
+        )
+
+        # Mark the latest source month as partial when the snapshot does not
+        # contain a full calendar month. This prevents the final point from
+        # looking like a real month-over-month collapse.
+        if "published_date" in vulnerability_priority.columns:
+            source_dates = pd.to_datetime(
+                vulnerability_priority["published_date"],
+                errors="coerce",
+            )
+
+            latest_source_date = source_dates.max()
+
+            if pd.notna(latest_source_date):
+                latest_month_end = latest_source_date + pd.offsets.MonthEnd(0)
+
+                if latest_source_date.normalize() < latest_month_end.normalize():
+                    latest_year = int(latest_source_date.year)
+                    latest_month = int(latest_source_date.month)
+
+                    partial_mask = (
+                        monthly_chart_data["published_year"].eq(latest_year)
+                        & monthly_chart_data["published_month"].eq(latest_month)
+                    )
+
+                    monthly_chart_data.loc[
+                        partial_mask,
+                        "month_label",
+                    ] = (
+                        monthly_chart_data.loc[
+                            partial_mask,
+                            "month_label",
+                        ]
+                        + " (partial)"
+                    )
+
+        if not monthly_chart_data.empty:
+            fig_monthly = px.line(
+                monthly_chart_data,
+                x="month_label",
+                y="total_cve_count",
+                markers=True,
+                title="Monthly Vulnerability Trends",
+                text="total_cve_count",
+                hover_data={
+                    "known_exploited_count": True,
+                    "published_year": False,
+                    "published_month": False,
+                },
+            )
+
+            fig_monthly.update_layout(
+                xaxis_title="Month",
+                yaxis_title="Total CVEs",
+                height=420,
+                margin=dict(l=20, r=20, t=60, b=40),
+                xaxis_type="category",
+            )
+
+            fig_monthly.update_traces(textposition="top center")
+            st.plotly_chart(fig_monthly, use_container_width=True)
+        else:
+            st.info("No monthly trend data matches the current filters.")
+
 
 with vendor_col:
-    if {"vendor", "product_name", "maximum_risk_score"}.issubset(vendor_risk_summary.columns):
-        top_vendor_risk = (
-            vendor_risk_summary
-            .dropna(subset=["vendor", "maximum_risk_score"])
-            .sort_values("maximum_risk_score", ascending=False)
-            .head(10)
-            .copy()
+    required_vendor_columns = {
+        "vendor",
+        "product_name",
+        "risk_score",
+    }
+
+    if required_vendor_columns.issubset(filtered_vulnerabilities.columns):
+        vendor_group_columns = ["vendor", "product_name"]
+
+        vendor_agg = {
+            "total_vulnerabilities": ("cve_id", "count"),
+            "average_risk_score": ("risk_score", "mean"),
+            "maximum_risk_score": ("risk_score", "max"),
+        }
+
+        if "is_known_exploited" in filtered_vulnerabilities.columns:
+            vendor_agg["known_exploited_count"] = (
+                "is_known_exploited",
+                lambda series: int(series.fillna(0).sum()),
+            )
+
+        vendor_chart_data = (
+            filtered_vulnerabilities
+            .dropna(subset=["vendor", "product_name"])
+            .groupby(vendor_group_columns, as_index=False)
+            .agg(**vendor_agg)
         )
 
-        top_vendor_risk["vendor_product"] = (
-            top_vendor_risk["vendor"].fillna("Unknown").astype(str).str.slice(0, 22)
-            + " - "
-            + top_vendor_risk["product_name"].fillna("Unknown").astype(str).str.slice(0, 28)
-        )
+        vendor_chart_data = vendor_chart_data[
+            vendor_chart_data["vendor"].astype(str).str.strip().ne("")
+            & vendor_chart_data["product_name"].astype(str).str.strip().ne("")
+        ].copy()
 
-        fig_vendor = px.bar(
-            top_vendor_risk.sort_values("maximum_risk_score"),
-            x="maximum_risk_score",
-            y="vendor_product",
-            orientation="h",
-            title="Top Vendor/Product Risk Ranking",
-            text="maximum_risk_score",
-        )
-        fig_vendor.update_layout(
-            xaxis_title="Maximum Risk Score",
-            yaxis_title="Vendor / Product",
-            height=420,
-            margin=dict(l=20, r=20, t=60, b=40),
-        )
-        st.plotly_chart(fig_vendor, use_container_width=True)
+        if "known_exploited_count" not in vendor_chart_data.columns:
+            vendor_chart_data["known_exploited_count"] = 0
+
+        if (
+            not vendor_chart_data.empty
+            and vendor_chart_data["known_exploited_count"].sum() > 0
+        ):
+            vendor_metric = "known_exploited_count"
+            vendor_title = "Top Vendor/Product by Known Exploited Vulnerabilities"
+            vendor_axis_title = "Known Exploited Vulnerabilities"
+            vendor_text_format = None
+
+            top_vendor_risk = (
+                vendor_chart_data
+                .sort_values(
+                    [
+                        "known_exploited_count",
+                        "average_risk_score",
+                        "total_vulnerabilities",
+                    ],
+                    ascending=[False, False, False],
+                )
+                .head(10)
+                .copy()
+            )
+        else:
+            # If the active filters contain no KEV matches, fall back to
+            # average risk instead of rendering ten identical zero-length bars.
+            vendor_metric = "average_risk_score"
+            vendor_title = "Top Vendor/Product by Average Risk Score"
+            vendor_axis_title = "Average Risk Score"
+            vendor_text_format = ".2f"
+
+            top_vendor_risk = (
+                vendor_chart_data
+                .sort_values(
+                    [
+                        "average_risk_score",
+                        "total_vulnerabilities",
+                    ],
+                    ascending=[False, False],
+                )
+                .head(10)
+                .copy()
+            )
+
+        if not top_vendor_risk.empty:
+            top_vendor_risk["vendor_product"] = (
+                top_vendor_risk["vendor"]
+                .fillna("Unknown")
+                .astype(str)
+                .str.slice(0, 22)
+                + " - "
+                + top_vendor_risk["product_name"]
+                .fillna("Unknown")
+                .astype(str)
+                .str.slice(0, 28)
+            )
+
+            vendor_plot_data = top_vendor_risk.sort_values(vendor_metric)
+
+            fig_vendor = px.bar(
+                vendor_plot_data,
+                x=vendor_metric,
+                y="vendor_product",
+                orientation="h",
+                title=vendor_title,
+                text=vendor_metric,
+                hover_data={
+                    "known_exploited_count": True,
+                    "total_vulnerabilities": ":,",
+                    "average_risk_score": ":.2f",
+                    "maximum_risk_score": ":.2f",
+                },
+            )
+
+            if vendor_text_format:
+                fig_vendor.update_traces(
+                    texttemplate=f"%{{text:{vendor_text_format}}}",
+                    textposition="outside",
+                )
+            else:
+                fig_vendor.update_traces(textposition="outside")
+
+            fig_vendor.update_layout(
+                xaxis_title=vendor_axis_title,
+                yaxis_title="Vendor / Product",
+                height=420,
+                margin=dict(l=20, r=35, t=60, b=40),
+            )
+
+            st.plotly_chart(fig_vendor, use_container_width=True)
+        else:
+            st.info("No vendor/product data matches the current filters.")
 
 
 # =========================
@@ -470,29 +662,138 @@ with vendor_col:
 
 st.markdown('<div class="section-header">CWE Weakness Risk Analysis</div>', unsafe_allow_html=True)
 
-if {"cwe_id", "maximum_risk_score", "total_vulnerabilities"}.issubset(cwe_risk_summary.columns):
-    top_cwe_risk = (
-        cwe_risk_summary
+required_cwe_columns = {
+    "cwe_id",
+    "risk_score",
+}
+
+if required_cwe_columns.issubset(filtered_vulnerabilities.columns):
+    cwe_agg = {
+        "total_vulnerabilities": ("cve_id", "count"),
+        "average_risk_score": ("risk_score", "mean"),
+        "maximum_risk_score": ("risk_score", "max"),
+    }
+
+    if "is_known_exploited" in filtered_vulnerabilities.columns:
+        cwe_agg["known_exploited_count"] = (
+            "is_known_exploited",
+            lambda series: int(series.fillna(0).sum()),
+        )
+
+    if "cvss_base_score" in filtered_vulnerabilities.columns:
+        cwe_agg["average_cvss_score"] = (
+            "cvss_base_score",
+            "mean",
+        )
+
+    if "epss_score" in filtered_vulnerabilities.columns:
+        cwe_agg["average_epss_score"] = (
+            "epss_score",
+            "mean",
+        )
+
+    cwe_chart_data = (
+        filtered_vulnerabilities
         .dropna(subset=["cwe_id"])
-        .sort_values(["maximum_risk_score", "total_vulnerabilities"], ascending=False)
-        .head(15)
+        .groupby("cwe_id", as_index=False)
+        .agg(**cwe_agg)
     )
 
-    fig_cwe = px.bar(
-        top_cwe_risk.sort_values("maximum_risk_score"),
-        x="maximum_risk_score",
-        y="cwe_id",
-        orientation="h",
-        title="Top CWE Categories by Maximum Risk Score",
-        hover_data=["total_vulnerabilities", "known_exploited_count", "average_cvss_score"],
-    )
-    fig_cwe.update_layout(
-        xaxis_title="Maximum Risk Score",
-        yaxis_title="CWE ID",
-        height=500,
-        margin=dict(l=20, r=20, t=60, b=40),
-    )
-    st.plotly_chart(fig_cwe, use_container_width=True)
+    cwe_chart_data = cwe_chart_data[
+        cwe_chart_data["cwe_id"].astype(str).str.strip().ne("")
+        & cwe_chart_data["cwe_id"].astype(str).ne("NVD-CWE-noinfo")
+    ].copy()
+
+    if "known_exploited_count" not in cwe_chart_data.columns:
+        cwe_chart_data["known_exploited_count"] = 0
+
+    if "average_cvss_score" not in cwe_chart_data.columns:
+        cwe_chart_data["average_cvss_score"] = float("nan")
+
+    if "average_epss_score" not in cwe_chart_data.columns:
+        cwe_chart_data["average_epss_score"] = float("nan")
+
+    if (
+        not cwe_chart_data.empty
+        and cwe_chart_data["known_exploited_count"].sum() > 0
+    ):
+        cwe_metric = "known_exploited_count"
+        cwe_title = "Top CWE Categories by Known Exploited Vulnerabilities"
+        cwe_axis_title = "Known Exploited Vulnerabilities"
+        cwe_text_format = None
+
+        top_cwe_risk = (
+            cwe_chart_data
+            .sort_values(
+                [
+                    "known_exploited_count",
+                    "average_risk_score",
+                    "total_vulnerabilities",
+                ],
+                ascending=[False, False, False],
+            )
+            .head(15)
+            .copy()
+        )
+    else:
+        # When the current filter has no known exploited CVEs, average risk
+        # remains informative and avoids an all-zero ranking.
+        cwe_metric = "average_risk_score"
+        cwe_title = "Top CWE Categories by Average Risk Score"
+        cwe_axis_title = "Average Risk Score"
+        cwe_text_format = ".2f"
+
+        top_cwe_risk = (
+            cwe_chart_data
+            .sort_values(
+                [
+                    "average_risk_score",
+                    "total_vulnerabilities",
+                ],
+                ascending=[False, False],
+            )
+            .head(15)
+            .copy()
+        )
+
+    if not top_cwe_risk.empty:
+        cwe_plot_data = top_cwe_risk.sort_values(cwe_metric)
+
+        fig_cwe = px.bar(
+            cwe_plot_data,
+            x=cwe_metric,
+            y="cwe_id",
+            orientation="h",
+            title=cwe_title,
+            text=cwe_metric,
+            hover_data={
+                "known_exploited_count": True,
+                "total_vulnerabilities": ":,",
+                "average_risk_score": ":.2f",
+                "maximum_risk_score": ":.2f",
+                "average_cvss_score": ":.2f",
+                "average_epss_score": ":.4f",
+            },
+        )
+
+        if cwe_text_format:
+            fig_cwe.update_traces(
+                texttemplate=f"%{{text:{cwe_text_format}}}",
+                textposition="outside",
+            )
+        else:
+            fig_cwe.update_traces(textposition="outside")
+
+        fig_cwe.update_layout(
+            xaxis_title=cwe_axis_title,
+            yaxis_title="CWE ID",
+            height=500,
+            margin=dict(l=20, r=35, t=60, b=40),
+        )
+
+        st.plotly_chart(fig_cwe, use_container_width=True)
+    else:
+        st.info("No CWE data matches the current filters.")
 
 
 # =========================

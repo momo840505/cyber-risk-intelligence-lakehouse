@@ -1,51 +1,44 @@
-# Python cache
+# Python
 __pycache__/
 *.pyc
 .pytest_cache/
+*.egg-info/
 
-# Virtual environment
+# Virtual environments
 .venv/
 
-# Local data lakehouse outputs
+# Local lakehouse outputs
 data/bronze/
 data/silver/
 data/gold/
 
+# Local configuration
 .env
+.streamlit/
+.vscode/
+
+# MLflow
 .mlflow/
 mlruns/
 
-# OS files
-.DS_Store
-.vscode/
-Thumbs.db
-
-# Python package metadata
-*.egg-info/
-
-# Streamlit local config
-.streamlit/
-
-# Local analytics database
+# Local analytics and model artifacts
 analytics/*.duckdb
 analytics/*.duckdb.wal
+models/*.joblib
 
 # dbt generated files
 dbt/**/target/
 dbt/**/logs/
 dbt/**/dbt_packages/
 
-# MLflow local tracking
-mlruns/
-
-# Local model artifacts
-models/*.joblib
-
 # Runtime monitoring logs
 monitoring/api_usage_log.csv
 
-# Terraform local files
+# Terraform runtime files
 **/.terraform/
-**/.terraform.lock.hcl
 **/terraform.tfstate
 **/terraform.tfstate.backup
+
+# OS files
+.DS_Store
+Thumbs.db

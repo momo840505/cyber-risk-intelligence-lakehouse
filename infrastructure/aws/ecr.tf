@@ -1,6 +1,6 @@
 resource "aws_ecr_repository" "api" {
   name                 = "${local.name_prefix}-api"
-  image_tag_mutability = "MUTABLE"
+  image_tag_mutability = "IMMUTABLE"
 
   image_scanning_configuration {
     scan_on_push = true
@@ -10,11 +10,7 @@ resource "aws_ecr_repository" "api" {
     encryption_type = "AES256"
   }
 
-  tags = merge(
-    local.common_tags,
-    {
-      Name = "${local.name_prefix}-api-ecr"
-      Role = "container-registry"
-    }
-  )
+  tags = merge(local.common_tags, {
+    Role = "container-registry"
+  })
 }

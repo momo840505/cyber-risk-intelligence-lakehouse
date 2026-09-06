@@ -134,7 +134,7 @@ def validate_vulnerability_priority(dataframe: pd.DataFrame) -> List[ValidationR
 
         if duplicate_cve_count > 0:
             results.append(
-                warn_check(
+                fail_check(
                     "vulnerability_priority duplicate CVE IDs",
                     f"Found {duplicate_cve_count:,} duplicate cve_id values.",
                 )
@@ -265,6 +265,25 @@ def validate_vendor_risk_summary(dataframe: pd.DataFrame) -> List[ValidationResu
     ]
 
     results.extend(check_required_columns(dataframe, table_name, required_columns))
+
+    for column_name in ("vendor", "product_name"):
+        if column_name in dataframe.columns:
+            missing_count = dataframe[column_name].isna().sum()
+
+            if missing_count > 0:
+                results.append(
+                    fail_check(
+                        f"Vendor summary {column_name} missing values",
+                        f"Found {missing_count:,} rows with missing {column_name}.",
+                    )
+                )
+            else:
+                results.append(
+                    pass_check(
+                        f"Vendor summary {column_name} missing values",
+                        f"No missing {column_name} values found.",
+                    )
+                )
 
     if "total_vulnerabilities" in dataframe.columns:
         invalid_count = (dataframe["total_vulnerabilities"].fillna(0) <= 0).sum()

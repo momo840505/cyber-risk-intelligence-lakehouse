@@ -1,0 +1,11 @@
+{
+  "generated_at_utc": "2026-09-06T19:25:06.241294+00:00",
+  "published_date_min": "2024-09-06",
+  "published_date_max": "2026-09-06",
+  "row_counts": {
+    "vulnerability_priority": 121061,
+    "vendor_risk_summary": 34266,
+    "monthly_vulnerability_trends": 25,
+    "cwe_risk_summary": 678
+  }
+}
