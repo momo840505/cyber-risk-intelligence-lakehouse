@@ -1,4 +1,4 @@
-﻿cyber_risk_dbt:
+cyber_risk_dbt:
   target: dev
   outputs:
     dev:

@@ -1,4 +1,4 @@
-﻿with vendor_risk as (
+with vendor_risk as (
 
     select *
     from {{ ref('stg_vendor_risk_summary') }}

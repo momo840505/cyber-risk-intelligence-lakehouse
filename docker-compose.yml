@@ -1,4 +1,4 @@
-﻿services:
+services:
   cyber-risk-api:
     build:
       context: .

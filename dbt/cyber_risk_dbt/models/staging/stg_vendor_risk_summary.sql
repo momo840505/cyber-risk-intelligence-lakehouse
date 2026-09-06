@@ -1,4 +1,4 @@
-﻿select
+select
     cast(vendor as varchar) as vendor,
     cast(product_name as varchar) as product_name,
     cast(total_vulnerabilities as integer) as total_vulnerabilities,

@@ -1,4 +1,4 @@
-﻿# CVSS-Based Vulnerability Prioritisation
+# CVSS-Based Vulnerability Prioritisation
 
 CVSS base score helps estimate the technical severity of a vulnerability.
 

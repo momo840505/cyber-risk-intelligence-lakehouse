@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import json
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -26,6 +27,7 @@ ANALYTICS_DATABASE_PATH = BASE_DIR / "analytics" / "cyber_risk.duckdb"
 # exploitation likelihood (is_known_exploited), not the deterministic
 # priority_level. See that file's module docstring for the full rationale.
 MODEL_PATH = BASE_DIR / "models" / "exploitation_likelihood_classifier.joblib"
+MODEL_METRICS_PATH = BASE_DIR / "reports" / "model_metrics.json"
 MONITORING_DIR = BASE_DIR / "monitoring"
 API_USAGE_LOG_PATH = MONITORING_DIR / "api_usage_log.csv"
 
@@ -107,6 +109,25 @@ def load_model():
         )
 
     return joblib.load(MODEL_PATH)
+
+
+def load_decision_threshold(default: float = 0.5) -> float:
+    """
+    ml/train_priority_model.py picks an operating threshold by maximising
+    F1 on out-of-fold CV predictions instead of relying on the sklearn
+    default of 0.5 (arbitrary for a target this rare). Reuse that same
+    threshold here so the live API's classification agrees with what the
+    training report says the model does -- falls back to 0.5 if metrics
+    haven't been generated yet.
+    """
+    if not MODEL_METRICS_PATH.exists():
+        return default
+
+    try:
+        metrics = json.loads(MODEL_METRICS_PATH.read_text(encoding="utf-8"))
+        return float(metrics.get("tuned_threshold", default))
+    except (ValueError, TypeError):
+        return default
 
 
 def append_api_log(
@@ -414,7 +435,6 @@ def predict_exploitation_likelihood(
         ]
     )
 
-    prediction = model.predict(input_dataframe)[0]
     probabilities = model.predict_proba(input_dataframe)[0]
     classes = model.classes_
 
@@ -422,18 +442,28 @@ def predict_exploitation_likelihood(
         probabilities[list(classes).index(1)]
     ) if 1 in list(classes) else None
 
+    decision_threshold = load_decision_threshold()
+    predicted_known_exploited = (
+        exploited_probability is not None
+        and exploited_probability >= decision_threshold
+    )
+
     return {
-        "predicted_known_exploited": bool(prediction),
+        "predicted_known_exploited": predicted_known_exploited,
         "known_exploited_probability": (
             round(exploited_probability, 4)
             if exploited_probability is not None
             else None
         ),
+        "decision_threshold_used": decision_threshold,
         "input": request.model_dump(),
         "note": (
             "This estimates exploitation likelihood from static CVE "
             "metadata only. It does not use EPSS and is not a substitute "
-            "for it -- treat this as a complementary triage signal."
+            "for it -- treat this as a complementary triage signal. "
+            "predicted_known_exploited applies the F1-tuned threshold from "
+            "the latest training run (reports/model_metrics.json), not the "
+            "sklearn default of 0.5 -- see README for why."
         ),
     }
 

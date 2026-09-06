@@ -391,10 +391,38 @@ intentionally **not** used as features -- see the note above.
 ### Current Model Metrics
 
 KEV membership is rare (most CVEs are never observed being exploited), so
-this is reported as an imbalanced binary classification problem. Accuracy
-alone is close to meaningless here -- a model that always predicts "not
-exploited" already scores close to the baseline below without learning
-anything.
+the headline number here is `cv_roc_auc_out_of_fold`, not plain `accuracy`.
+A model that always predicts "not exploited" already scores close to
+`baseline_accuracy_always_majority_class` without learning anything, and a
+single train/test split only holds a handful of positive examples in the
+test set -- across two actual pipeline runs, single-split `roc_auc` swung
+from 0.47 to 0.75 purely depending on which positives landed in that split.
+`cv_roc_auc_out_of_fold` comes from 5-fold stratified cross-validation and
+pools out-of-fold predictions across every known-exploited CVE in the full
+dataset instead, and has stayed in the 0.79-0.80 range across both runs so
+far -- that's the one worth trusting.
+
+Two other things reported alongside the classification metrics:
+
+- `precision_at_k` / `recall_at_k` (K = 10, 20, 50): of the top-K CVEs
+  ranked by predicted probability, how many are actually known-exploited.
+  This model's real use case is ranking a review queue, not a single
+  yes/no call, so precision@K matches that use case better than a global
+  metric like average precision does.
+- `tuned_threshold`: the probability cutoff that maximises F1 on the
+  out-of-fold predictions, used by the `/predict-exploitation-likelihood`
+  API endpoint instead of the sklearn default of 0.5 (see
+  `ml/train_priority_model.py` and `api/main.py::load_decision_threshold`).
+  With only 15 positive examples total, treat this as a reasonable
+  starting point, not a precisely optimised number -- it can move on the
+  next ingestion run.
+
+Run the ML workflow and copy the real numbers from
+`reports/model_metrics.json` into the block below:
+
+```powershell
+python .\scripts\run_ml.py
+```
 
 ```json
 {
@@ -412,45 +440,54 @@ anything.
   "classes": [0, 1],
   "cv_folds": 5,
   "cv_roc_auc_out_of_fold": 0.7941,
-  "cv_average_precision_out_of_fold": 0.0061
+  "cv_average_precision_out_of_fold": 0.0061,
+  "tuned_threshold": 0.3862,
+  "tuned_threshold_precision": 0.0099,
+  "tuned_threshold_recall": 0.6,
+  "tuned_threshold_f1": 0.0194,
+  "precision_at_10": 0.0,
+  "recall_at_10": 0.0,
+  "precision_at_20": 0.0,
+  "recall_at_20": 0.0,
+  "precision_at_50": 0.0,
+  "recall_at_50": 0.0
 }
 ```
 
-Only 15 of 11,506 CVEs in this training set are known-exploited (0.13%). With
-so few positive examples, the plain single-split `roc_auc`/`average_precision`
-above are noisy from run to run: across two separate pipeline runs (each
-pulling a different rolling 30-day NVD window), the single-split `roc_auc`
-has come out anywhere from 0.47 to 0.75, purely depending on which handful of
-positive examples happened to land in the test split that time.
+Only 15 of 11,506 CVEs in this training set are known-exploited (0.13%), so
+average precision stays low even alongside a decent ROC-AUC -- at this base
+rate a well-ranking model still produces many false positives for every
+true positive it flags.
 
-`cv_roc_auc_out_of_fold` and `cv_average_precision_out_of_fold` are the more
-trustworthy numbers: they come from 5-fold stratified cross-validation,
-pooling out-of-fold predictions across every known-exploited example instead
-of just the ones in one split, and have stayed in the 0.79-0.80 range across
-both runs. That's meaningfully better than chance, so the model has learned
-a real signal from static CVSS/CWE metadata alone. Average precision stays
-low even with that signal, because at a ~0.1% base rate a well-ranking model
-still produces many false positives for every true positive it flags -- an
-inherent property of finding a handful of needles in an 11,000+-row
-haystack, not a sign the pipeline is broken.
+`precision_at_10/20/50` coming out at exactly 0.0 in this run is a real,
+checked result, not a bug -- and it's the most honest finding in this whole
+section. Looking at the out-of-fold ranks directly: the best-placed
+known-exploited CVE in this run landed at rank ~190 out of 11,506 (top ~2%,
+genuinely better than random), but every one of the top ~190 spots was
+taken by a CRITICAL-severity, CVSS 9.3-9.8 CVE that was **never** exploited.
+CVSS/CWE metadata alone can flag "this looks dangerous," but a few hundred
+other CVEs look equally dangerous by that same metadata and weren't
+exploited -- there's nothing in this feature set to break that tie. That's
+also exactly the gap a behavioural signal like EPSS is built to fill
+(threat-intel chatter, public PoC availability, actual attacker interest),
+which is precisely why EPSS is excluded as a feature here rather than
+reused (see the target-leakage note above) -- this model and EPSS are
+answering a related but different question, and this result is a concrete
+illustration of the ceiling that static CVSS/CWE metadata runs into on its
+own. Read this model as a broad risk-scoring signal, not a precise "top N
+to review" tool, until it's paired with a behavioural signal or richer
+features (e.g. text from the CVE description or vendor advisories).
 
-Note: `reports/data_quality_report.csv` and the raw `data/gold/vulnerability_priority`
-parquet can show a different row count than the training-set figure above --
-that's expected, not a bug: rows with missing values in a required feature
-(e.g. no CVSS score yet) are dropped before training, so the training set is
-always somewhat smaller than the full Gold table. What should NOT drift
-independently is data_quality_report.csv vs the Gold parquet row count
-themselves -- re-run the full pipeline (`python .\scripts\run_pipeline.py`
-followed by `python .\scripts\run_ml.py`) in one sitting before quoting any
-of these numbers together (e.g. in an interview or on a resume), so they all
-reflect the same ingestion snapshot.
-
-Run the ML workflow and copy the real numbers from
-`reports/model_metrics.json` into the block above:
-
-```powershell
-python .\scripts\run_ml.py
-```
+Note: `reports/data_quality_report.csv` and the raw
+`data/gold/vulnerability_priority` parquet can show a different row count
+than the training-set figures above -- that's expected, not a bug: rows
+missing a required feature (e.g. no CVSS score yet) get dropped before
+training. What should NOT drift independently is `data_quality_report.csv`
+vs the Gold parquet row count themselves -- re-run the full pipeline
+(`python .\scripts\run_pipeline.py` then `python .\scripts\run_ml.py`) in
+one sitting before quoting any of these numbers together (e.g. in an
+interview or on a resume), so they all reflect the same ingestion
+snapshot.
 
 ---
 
@@ -682,17 +719,38 @@ It does not provide:
 
 ## Copilot Evaluation
 
-The project includes an evaluation script for remediation copilot outputs.
+The evaluation script checks the copilot on two different levels:
+`pass_rate` (did it run and return something) and `mean_quality_score`
+(does what it returned actually reflect this specific CVE).
 
-**What `pass_rate` actually measures:** a case "passes" if the copilot returns
-a non-empty recommended-actions list, source list, safety note, and priority
-explanation for a CVE it can find. Because `build_context_aware_actions`
-always appends a set of urgency-appropriate baseline actions regardless of
-which CVE is queried, a 100% pass rate mostly confirms the pipeline runs
-end-to-end without crashing -- it is a completeness/smoke check, not a
-measure of remediation-advice quality or relevance. The additional
-`cwe_specific_guidance` field (see below) is a better signal for whether a
-given case actually got CVE-specific advice beyond that baseline.
+`pass_rate` only checks that the copilot found the CVE and returned a
+non-empty actions list, source list, safety note, and priority explanation.
+Because `build_context_aware_actions` always appends a set of
+urgency-appropriate baseline actions regardless of which CVE is queried, a
+100% pass rate mostly just confirms the pipeline runs end-to-end without
+crashing -- it's a completeness/smoke check, not a quality measure.
+
+`mean_quality_score` is a rougher but more useful signal, averaged per case
+from three checks (only counting the ones that actually apply to that
+case):
+
+- `has_cwe_specific_guidance` -- did the actions include anything beyond
+  the fixed baseline (only possible for the 4 CWEs currently mapped in
+  `CWE_ACTIONS`; a case whose CWE has no mapping isn't counted against
+  this, since the copilot has no way to fill that gap yet)
+- `has_relevant_retrieval` -- did the RAG step actually find a
+  knowledge-base doc with real vocabulary overlap (cosine similarity
+  >= 0.05), rather than just returning its highest-scoring doc regardless
+  of how weak that match is
+- `has_context_appropriate_source` -- for known-exploited or
+  Emergency-urgency CVEs, did retrieval surface the specific doc that
+  `filter_documents_for_context` is designed to prioritise for that
+  situation (`cisa_kev_remediation.md` / `emergency_response.md`)
+
+This is still a heuristic, not human-graded ground truth: it checks that
+the system behaved the way it's designed to, not that the remediation
+advice is genuinely good. A real quality bar would need manual grading or
+an LLM-as-judge step -- listed under Future Improvements.
 
 Run evaluation (this writes the real numbers to
 `reports/copilot_eval_summary.json` -- copy them from there rather than
@@ -710,8 +768,12 @@ Output shape:
   "passed_cases": 5,
   "failed_cases": 0,
   "pass_rate": 1.0,
+  "pass_rate_note": "completeness check only -- see mean_quality_score",
   "cases_with_cwe_mapping": "<int: how many of the 5 CVEs have a CWE_ACTIONS entry>",
-  "cwe_specific_guidance_rate": "<float or null if cases_with_cwe_mapping is 0>"
+  "cwe_specific_guidance_rate": "<float or null if cases_with_cwe_mapping is 0>",
+  "cases_with_relevant_retrieval": "<int>",
+  "cases_with_context_appropriate_source": "<int>",
+  "mean_quality_score": "<float>"
 }
 ```
 
@@ -1290,7 +1352,8 @@ Current limitations:
   longer NVD history (or an older, fixed publication-date cutoff) to
   measure separately.
 - Current local deployment uses Docker Compose rather than a hosted cloud service.
-- Only 15 of 11,506 CVEs in the current training set are known-exploited (0.13%). Cross-validated ROC-AUC (~0.79, see 'Current Model Metrics' above) shows the model ranks likely-exploited CVEs meaningfully above others, but average precision stays low at this base rate -- in practice the model is useful for prioritising a review queue, not for an automated yes/no exploitation call. A larger historical KEV sample would be needed to push average precision higher.
+- Only 15 of 11,506 CVEs in the current training set are known-exploited (0.13%). Cross-validated ROC-AUC (~0.79) shows the model separates known-exploited CVEs from the bulk of the dataset better than chance, but precision@10/20/50 come out at 0.0 in the current run -- the best-ranked known-exploited CVE lands around rank ~190 of 11,506, behind roughly 190 CRITICAL-severity, high-CVSS CVEs that were never exploited (see 'Current Model Metrics' above for the full breakdown). In plain terms: CVSS/CWE metadata alone can flag "this looks dangerous" but can't reliably pick out which of several similarly-dangerous-looking CVEs actually gets exploited -- that needs a behavioural signal like EPSS, which this project deliberately doesn't reuse as a feature. Treat this as a broad risk-scoring signal, not a precise top-N triage tool, and the F1-tuned decision threshold the API uses can shift meaningfully on the next retrain.
+- The copilot's `mean_quality_score` (see 'Copilot Evaluation' above) checks that retrieval and CWE-mapping behaved the way they're designed to, not that the remediation advice is actually good guidance -- there's no human-graded or LLM-graded quality baseline yet.
 
 ---
 

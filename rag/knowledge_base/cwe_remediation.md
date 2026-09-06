@@ -1,4 +1,4 @@
-﻿# CWE Remediation Guidance
+# CWE Remediation Guidance
 
 Common Weakness Enumeration categories help explain the weakness type behind a CVE.
 

@@ -1,4 +1,4 @@
-﻿select
+select
     cast(cwe_id as varchar) as cwe_id,
     cast(total_vulnerabilities as integer) as total_vulnerabilities,
     cast(known_exploited_count as integer) as known_exploited_count,

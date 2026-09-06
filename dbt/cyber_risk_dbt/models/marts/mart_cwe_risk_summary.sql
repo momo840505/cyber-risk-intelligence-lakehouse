@@ -1,4 +1,4 @@
-﻿select
+select
     cwe_id,
     total_vulnerabilities,
     known_exploited_count,

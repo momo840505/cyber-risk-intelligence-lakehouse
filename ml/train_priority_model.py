@@ -21,6 +21,7 @@ from sklearn.metrics import (
     classification_report,
     confusion_matrix,
     f1_score,
+    precision_recall_curve,
     roc_auc_score,
 )
 from sklearn.model_selection import (
@@ -323,6 +324,37 @@ def calculate_shap_importance(
     return shap_importance
 
 
+def precision_recall_at_k(y_true: np.ndarray, y_scores: np.ndarray, k: int) -> tuple[float, float]:
+    """
+    Of the top-K CVEs ranked by predicted exploitation likelihood, what
+    fraction are actually known-exploited (precision@K), and what fraction
+    of ALL known-exploited CVEs did we catch in that top K (recall@K)?
+
+    This is the metric that actually matches how the model gets used: a
+    triager works down a ranked list starting from the top, they don't
+    apply a probability cutoff. Global metrics like accuracy or ROC-AUC
+    don't tell you whether the CVEs you'd actually look at first are the
+    right ones -- precision@K does.
+    """
+    y_true = np.asarray(y_true)
+    y_scores = np.asarray(y_scores)
+
+    ranked_indices = np.argsort(-y_scores)
+    top_k_indices = ranked_indices[:k]
+
+    true_positives_in_top_k = int(y_true[top_k_indices].sum())
+    total_positives = int(y_true.sum())
+
+    precision_at_k = true_positives_in_top_k / k
+    recall_at_k = (
+        true_positives_in_top_k / total_positives
+        if total_positives > 0
+        else float("nan")
+    )
+
+    return precision_at_k, recall_at_k
+
+
 def main() -> None:
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
@@ -444,6 +476,71 @@ def main() -> None:
             "cv_average_precision_out_of_fold",
             metrics["cv_average_precision_out_of_fold"],
         )
+
+        # ------------------------------------------------------------------
+        # Operating threshold: the default .predict() cutoff is 0.5, which
+        # is an arbitrary choice for a target this rare (0.13% positive).
+        # Pick the threshold that maximises F1 on the out-of-fold CV
+        # predictions instead, and report what precision/recall that
+        # threshold actually buys. This is exposed via model_metrics.json
+        # so the API applies the SAME threshold instead of silently using
+        # the sklearn default -- see api/main.py.
+        # ------------------------------------------------------------------
+        precisions, recalls, thresholds = precision_recall_curve(
+            full_target, cv_probabilities
+        )
+        f1_scores = np.divide(
+            2 * precisions * recalls,
+            precisions + recalls,
+            out=np.zeros_like(precisions),
+            where=(precisions + recalls) > 0,
+        )
+        # precision_recall_curve returns one more precision/recall pair than
+        # thresholds (the last pair corresponds to "no threshold" / predict
+        # everything as negative), so we only search over the aligned range.
+        best_index = int(np.argmax(f1_scores[:-1])) if len(thresholds) > 0 else None
+
+        if best_index is not None:
+            metrics["tuned_threshold"] = round(float(thresholds[best_index]), 4)
+            metrics["tuned_threshold_precision"] = round(
+                float(precisions[best_index]), 4
+            )
+            metrics["tuned_threshold_recall"] = round(
+                float(recalls[best_index]), 4
+            )
+            metrics["tuned_threshold_f1"] = round(
+                float(f1_scores[best_index]), 4
+            )
+        else:
+            metrics["tuned_threshold"] = 0.5
+
+        metrics["tuned_threshold_note"] = (
+            "Chosen by maximising F1 on 5-fold out-of-fold predictions across "
+            "all known-exploited CVEs in the dataset. With only "
+            f"{int(full_target.sum())} positive examples total, treat this as "
+            "a reasonable starting point, not a precisely optimised cutoff -- "
+            "it can shift meaningfully on the next ingestion run."
+        )
+
+        # ------------------------------------------------------------------
+        # Precision@K / Recall@K: the metric that matches how this model
+        # actually gets used (a triager works down a ranked list, they
+        # don't apply a probability cutoff). Computed on out-of-fold CV
+        # predictions across the full dataset rather than the test split,
+        # since the test split alone holds too few positives (~3-4) for
+        # these numbers to mean anything.
+        # ------------------------------------------------------------------
+        full_target_array = full_target.to_numpy()
+        for k in (10, 20, 50):
+            precision_at_k, recall_at_k = precision_recall_at_k(
+                full_target_array, cv_probabilities, k
+            )
+            metrics[f"precision_at_{k}"] = round(precision_at_k, 4)
+            metrics[f"recall_at_{k}"] = round(recall_at_k, 4)
+            mlflow.log_metric(f"precision_at_{k}", metrics[f"precision_at_{k}"])
+            mlflow.log_metric(f"recall_at_{k}", metrics[f"recall_at_{k}"])
+
+        mlflow.log_metric("tuned_threshold", metrics["tuned_threshold"])
 
         save_json(metrics, METRICS_PATH)
 

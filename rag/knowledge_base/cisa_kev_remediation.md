@@ -1,4 +1,4 @@
-﻿# CISA KEV Remediation Guidance
+# CISA KEV Remediation Guidance
 
 Known exploited vulnerabilities should be treated as urgent because there is evidence of active exploitation.
 

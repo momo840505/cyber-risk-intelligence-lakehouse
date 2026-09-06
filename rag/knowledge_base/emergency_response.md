@@ -1,4 +1,4 @@
-﻿# Emergency Vulnerability Response
+# Emergency Vulnerability Response
 
 Emergency response is required when a vulnerability has strong exploitation signals or severe business impact.
 
