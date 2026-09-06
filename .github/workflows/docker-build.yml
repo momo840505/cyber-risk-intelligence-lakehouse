@@ -16,3 +16,22 @@ jobs:
 
       - name: Build Docker image
         run: docker build -t cyber-risk-intelligence-api:ci .
+
+      - name: Run image and check it actually starts
+        run: |
+          docker run -d --name ci-smoke -p 8000:8000 cyber-risk-intelligence-api:ci
+          for i in $(seq 1 10); do
+            if curl -sf http://localhost:8000/health; then
+              echo "Container responded, image is not just building, it runs"
+              exit 0
+            fi
+            echo "Waiting for container to come up (attempt $i)..."
+            sleep 2
+          done
+          echo "Container never responded on /health"
+          docker logs ci-smoke
+          exit 1
+
+      - name: Stop container
+        if: always()
+        run: docker rm -f ci-smoke || true

@@ -12,9 +12,14 @@ RUN python -m pip install --upgrade pip && \
 
 COPY api ./api
 COPY rag ./rag
+COPY entrypoint.sh ./entrypoint.sh
 
-RUN mkdir -p analytics models monitoring reports
+RUN mkdir -p analytics models monitoring reports && \
+    useradd --create-home --shell /bin/sh appuser && \
+    chown -R appuser:appuser /app && \
+    chmod +x entrypoint.sh
 
 EXPOSE 8000
 
+ENTRYPOINT ["./entrypoint.sh"]
 CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
