@@ -768,7 +768,7 @@ Output shape:
   "passed_cases": 5,
   "failed_cases": 0,
   "pass_rate": 1.0,
-  "pass_rate_note": "completeness check only -- see mean_quality_score",
+  "pass_rate_note": "Completeness check only (found + non-empty fields) -- see mean_quality_score below for whether the content is actually specific to each CVE.",
   "cases_with_cwe_mapping": "<int: how many of the 5 CVEs have a CWE_ACTIONS entry>",
   "cwe_specific_guidance_rate": "<float or null if cases_with_cwe_mapping is 0>",
   "cases_with_relevant_retrieval": "<int>",

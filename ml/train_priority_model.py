@@ -69,11 +69,11 @@ SHAP_IMPORTANCE_PLOT_PATH = REPORTS_DIR / "shap_feature_importance.png"
 #     src/cyber_risk/etl/build_gold_tables.py). Including them, or anything
 #     derived from them, would let the model "predict" the target by
 #     algebra instead of learning anything.
-#   - epss_score, epss_percentile -> EPSS is FIRST-party's own exploitation
-#     -probability model. Using its output as an input feature would just
-#     be re-packaging another model's prediction, not a genuine standalone
-#     signal, and would make it impossible to tell how much of our accuracy
-#     is "borrowed" from EPSS.
+#   - epss_score, epss_percentile -> EPSS is FIRST's (the org behind it)
+#     own exploitation-probability model. Using its output as an input
+#     feature would just be re-packaging another model's prediction, not
+#     a genuine standalone signal, and would make it impossible to tell
+#     how much of our accuracy is "borrowed" from EPSS.
 #
 # What is left is exactly the kind of information a triager has the moment
 # a CVE is published, before anyone knows whether it will be exploited:
@@ -445,9 +445,12 @@ def main() -> None:
         # that small, those numbers are close to noise (a different random
         # split could easily swing ROC-AUC from ~0.3 to ~0.7 by luck alone).
         # Stratified k-fold cross-validation pools out-of-fold predictions
-        # across all 12 positive examples in the full dataset instead of
-        # just the ones in one test split, which is the more statistically
-        # honest way to check whether this model has learned anything.
+        # across every known-exploited CVE in the full dataset instead of
+        # just the handful that land in one test split, which is the more
+        # statistically honest way to check whether this model has learned
+        # anything. (The exact positive count moves with each ingestion
+        # run -- see model_metrics.json's cv_folds section for the number
+        # from the latest run, rather than hardcoding one here.)
         full_features = dataframe[NUMERIC_FEATURES + CATEGORICAL_FEATURES]
         full_target = dataframe[TARGET_COLUMN].astype(int)
 
