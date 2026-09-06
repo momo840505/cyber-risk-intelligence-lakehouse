@@ -2,5 +2,7 @@
   "evaluated_cases": 5,
   "passed_cases": 5,
   "failed_cases": 0,
-  "pass_rate": 1.0
+  "pass_rate": 1.0,
+  "cases_with_cwe_mapping": 1,
+  "cwe_specific_guidance_rate": 1.0
 }

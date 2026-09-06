@@ -4,6 +4,7 @@ import json
 import sys
 from pathlib import Path
 
+import duckdb
 import pandas as pd
 
 
@@ -16,18 +17,50 @@ from rag.remediation_copilot import CWE_ACTIONS, generate_remediation_plan
 
 
 REPORTS_DIR = BASE_DIR / "reports"
+ANALYTICS_DATABASE_PATH = BASE_DIR / "analytics" / "cyber_risk.duckdb"
 
 EVAL_REPORT_PATH = REPORTS_DIR / "copilot_eval_report.csv"
 EVAL_SUMMARY_PATH = REPORTS_DIR / "copilot_eval_summary.json"
 
+EVAL_CASE_COUNT = 5
 
-EVAL_CVES = [
-    "CVE-2026-48908",
-    "CVE-2026-48282",
-    "CVE-2026-48939",
-    "CVE-2026-56290",
-    "CVE-2016-20068",
-]
+
+def select_eval_cves(limit: int = EVAL_CASE_COUNT) -> list[str]:
+    """
+    Pick CVE IDs to evaluate the copilot against, straight from the current
+    analytics database instead of a hardcoded list.
+
+    A hardcoded list breaks silently: NVD ingestion only pulls a rolling
+    30-day window (see README 'Limitations'), so any specific CVE ID picked
+    today can simply fall out of the dataset on a later pipeline run --
+    every case then evaluates to found=False, which looks like the copilot
+    is broken when actually the fixture CVE IDs are just stale. Selecting
+    known-exploited CVEs by risk_score at evaluation time keeps this script
+    correct across ingestion runs with no manual upkeep.
+    """
+    if not ANALYTICS_DATABASE_PATH.exists():
+        raise FileNotFoundError(
+            f"Analytics database not found: {ANALYTICS_DATABASE_PATH}. "
+            "Run scripts/run_dbt.py (or scripts/run_pipeline.py) first."
+        )
+
+    query = """
+        select cve_id
+        from mart_vulnerability_priority
+        order by is_known_exploited desc, risk_score desc
+        limit ?
+    """
+
+    with duckdb.connect(str(ANALYTICS_DATABASE_PATH), read_only=True) as connection:
+        dataframe = connection.execute(query, [limit]).fetchdf()
+
+    if dataframe.empty:
+        raise RuntimeError(
+            "mart_vulnerability_priority is empty -- run the full pipeline "
+            "(scripts/run_pipeline.py) before evaluating the copilot."
+        )
+
+    return dataframe["cve_id"].tolist()
 
 
 def evaluate_plan(plan: dict) -> dict:
@@ -82,9 +115,11 @@ def evaluate_plan(plan: dict) -> dict:
 def main() -> None:
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
+    eval_cves = select_eval_cves()
+
     rows = []
 
-    for cve_id in EVAL_CVES:
+    for cve_id in eval_cves:
         plan = generate_remediation_plan(cve_id)
         rows.append(evaluate_plan(plan))
 

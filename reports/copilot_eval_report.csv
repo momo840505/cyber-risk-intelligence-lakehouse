@@ -1,6 +1,6 @@
-cve_id,found,urgency,priority_level,recommended_sla,action_count,source_count,has_safety_note,has_priority_reason,passed
-CVE-2026-48908,True,Emergency,High,24 to 72 hours,10,3,True,True,True
-CVE-2026-48282,True,Emergency,High,24 to 72 hours,10,3,True,True,True
-CVE-2026-48939,True,Emergency,High,24 to 72 hours,10,3,True,True,True
-CVE-2026-56290,True,Emergency,High,24 to 72 hours,10,3,True,True,True
-CVE-2016-20068,True,Medium,Medium,30 to 60 days,10,3,True,True,True
+cve_id,found,urgency,priority_level,recommended_sla,action_count,source_count,has_safety_note,has_priority_reason,cwe_id,has_cwe_mapping,has_cwe_specific_guidance,passed
+CVE-2026-72898,True,Emergency,Critical,24 to 72 hours,10,3,True,True,CWE-89,True,True,True
+CVE-2026-60004,True,Emergency,Critical,24 to 72 hours,10,3,True,True,CWE-94,False,False,True
+CVE-2026-83548,True,Emergency,High,24 to 72 hours,10,3,True,True,CWE-441,False,False,True
+CVE-2026-82329,True,Emergency,High,24 to 72 hours,10,3,True,True,CWE-287,False,False,True
+CVE-2026-72530,True,Emergency,High,24 to 72 hours,10,3,True,True,CWE-94,False,False,True

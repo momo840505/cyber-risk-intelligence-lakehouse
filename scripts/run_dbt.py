@@ -35,7 +35,9 @@ def main() -> None:
 
     run_command(
         [
-            "dbt",
+            sys.executable,
+            "-c",
+            "from dbt.cli.main import cli; cli()",
             "build",
             "--project-dir",
             str(DBT_PROJECT_DIR),
@@ -47,7 +49,9 @@ def main() -> None:
 
     run_command(
         [
-            "dbt",
+            sys.executable,
+            "-c",
+            "from dbt.cli.main import cli; cli()",
             "docs",
             "generate",
             "--project-dir",

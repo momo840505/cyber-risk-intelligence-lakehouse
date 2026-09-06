@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import json
 import os
@@ -49,11 +49,16 @@ def main() -> None:
     assert_condition(len(top_vulnerabilities) > 0, "Top vulnerabilities response is empty")
     print("PASS /vulnerabilities/top")
 
-    remediation = request_json("/remediation/CVE-2026-48908")
-    assert_condition(remediation["found"] is True, "Remediation CVE was not found")
-    assert_condition(remediation["urgency"] == "Emergency", "Expected emergency remediation urgency")
+    # Pull a real, currently-ingested CVE ID from the API instead of hardcoding
+    # one. NVD ingestion only keeps a rolling 30-day window (see README
+    # "Limitations"), so a fixed CVE ID here would silently start failing
+    # the moment that CVE rolls out of the dataset on a later pipeline run.
+    sample_cve_id = top_vulnerabilities[0]["cve_id"]
+
+    remediation = request_json(f"/remediation/{sample_cve_id}")
+    assert_condition(remediation["found"] is True, f"Remediation CVE was not found: {sample_cve_id}")
     assert_condition(len(remediation["recommended_actions"]) > 0, "No remediation actions returned")
-    print("PASS /remediation/CVE-2026-48908")
+    print(f"PASS /remediation/{sample_cve_id}")
 
     metrics = request_json("/metrics")
     assert_condition("total_requests" in metrics, "Metrics response missing total_requests")
