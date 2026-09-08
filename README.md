@@ -5,11 +5,13 @@
 [![Docker Build](https://github.com/momo840505/cyber-risk-intelligence-lakehouse/actions/workflows/docker-build.yml/badge.svg)](https://github.com/momo840505/cyber-risk-intelligence-lakehouse/actions/workflows/docker-build.yml)
 [![Terraform Validate](https://github.com/momo840505/cyber-risk-intelligence-lakehouse/actions/workflows/terraform-validate.yml/badge.svg)](https://github.com/momo840505/cyber-risk-intelligence-lakehouse/actions/workflows/terraform-validate.yml)
 
-A cyber-risk data project built around public CISA, FIRST EPSS, and NVD data. The repository covers ingestion, PySpark transformations, dbt marts, data-quality checks, a small KEV-horizon triage ranking model, a FastAPI service, a Streamlit dashboard, retrieval-assisted remediation guidance, Docker, and an AWS Terraform deployment template.
+I built this project to practice a data-engineering pipeline on data that changes regularly and has a real prioritisation problem behind it.
 
-The project is deliberately explicit about what is local, what is tested in CI, and what has not been deployed to AWS.
+The repo pulls public vulnerability data from CISA KEV, FIRST EPSS, and NVD, processes it through PySpark Bronze/Silver/Gold layers, builds analytics tables with DuckDB and dbt, trains a small ranking model, and exposes the results through FastAPI and Streamlit.
 
-## Architecture
+I have tried to keep the claims in this README close to what the code actually does. The AWS files are a validated Terraform deployment template; I have not applied that infrastructure, so I do not describe it as a live AWS deployment.
+
+## Data flow
 
 ```mermaid
 flowchart LR
@@ -19,17 +21,15 @@ flowchart LR
 
     D --> E[PySpark Silver]
     E --> F[PySpark Gold]
-
     F --> G[Data quality checks]
     G --> H[DuckDB raw tables]
 
-    H --> I[dbt staging + marts in DuckDB]
-
+    H --> I[dbt staging + marts]
     H --> J[Model training]
     I --> J
-    J --> K[KEV horizon model]
+    J --> K[KEV-horizon ranker]
 
-    I --> L[Remediation engine]
+    I --> L[Retrieval-assisted remediation rules]
     Q[Local knowledge base] --> L
 
     I --> M[FastAPI]
@@ -40,66 +40,100 @@ flowchart LR
     N --> O[Streamlit]
 ```
 
-For AWS, the container and runtime artifacts are separated: the image is stored in ECR, the DuckDB/model/metrics files are stored in S3, and ECS downloads the configured artifact versions at task startup. The ALB only marks a task ready after the database can be queried and the model can be loaded.
+## What the model is actually predicting
 
-## Main components
+The model is not trained to predict "will this vulnerability be exploited?"
 
-### Data pipeline
+The retrospective target is narrower:
 
-- CISA KEV ingestion
-- FIRST EPSS daily bulk ingestion
-- NVD CVE ingestion with segmented historical lookback
-- PySpark Bronze/Silver/Gold layers
-- Gold-layer validation
-- DuckDB analytics database
-- dbt staging and marts
+> Among mature CVEs, rank which ones receive a **CISA KEV designation within 180 days of NVD publication**.
 
-### Analytics outputs
+I use a chronological train/validation/test split. Validation is used for threshold diagnostics, and the final test period is kept separate until evaluation.
 
-- vulnerability priority
-- vendor/product risk summary
-- monthly vulnerability summary
-- CWE risk summary
-- Streamlit dashboard
+The model intentionally excludes:
 
-### Model
+- `is_known_exploited`
+- `risk_score`
+- `priority_level`
+- EPSS
 
-The model ranks mature CVEs by whether they receive a CISA KEV designation within 180 days of NVD publication. It intentionally excludes `is_known_exploited`, `risk_score`, `priority_level`, and EPSS from the input features.
+from the input features used by the classifier.
 
-Evaluation uses a retrospective chronological train/validation/test split. Validation is used for threshold diagnostics; the final test period remains untouched until evaluation. Because the target is extremely rare, ranking metrics are the primary result and the API exposes an uncalibrated triage score rather than calling the output an exploitation probability.
+The API returns an **uncalibrated ranking score**, not an exploitation probability.
 
-Current temporal test highlights:
+Current temporal test results:
 
 ```text
-ROC-AUC:           0.8666
-Average precision: 0.0405
-Positive rate:     0.003443
-Precision@20:      0.1500
-Recall@20:         0.0385
-Lift@20:           43.56x
+ROC-AUC:            0.8666
+Average precision:  0.0405
+Positive rate:      0.003443
+Precision@20:       0.1500
+Recall@20:          0.0385
+Lift@20:            43.56x
 ```
 
-The tuned binary threshold is not presented as the main outcome because recall on the temporal test set is low. The useful signal is the model's ability to concentrate rare KEV-within-180-day cases near the top of the ranking.
+The target is very rare, so I care more about ranking metrics than headline accuracy. The tuned binary threshold is not the main result because recall on the temporal test set is low.
 
-This is a retrospective benchmark built from the current NVD snapshot, not a point-in-time historical backtest. NVD fields such as references and CVSS metadata can be revised after initial publication, so the model should be treated as a portfolio triage experiment rather than a production forecasting claim.
+There is another limitation that matters here: this is a retrospective benchmark built from the current NVD snapshot. Some NVD fields can be edited after publication, so this is not a perfect point-in-time historical simulation.
 
-### Remediation guidance
+## Remediation guidance
 
-`rag/remediation_engine.py` is a retrieval-assisted rule engine. It uses TF-IDF retrieval over a small local knowledge base and combines relevant retrieved actions with CVE-specific rules. The implementation is deterministic: retrieved source material and explicit rules determine the returned actions.
+`rag/remediation_engine.py` is a retrieval-assisted rule engine.
 
-### API
+It uses TF-IDF to retrieve relevant text from a small local knowledge base, then combines those retrieved actions with CVE-specific rules such as urgency, attack vector, and CWE handling.
 
-Local URL:
+There is no generative model in this remediation step. The returned actions come from explicit rules and retrieved source text.
+
+I kept it this way so the remediation output is easy to trace back to the code and source material.
+
+## Main data layers
+
+### Ingestion
+
+- CISA Known Exploited Vulnerabilities
+- FIRST EPSS daily bulk data
+- NVD CVE data
+
+### PySpark
+
+- Bronze source storage
+- Silver cleaned records
+- Gold vulnerability and summary tables
+
+### Analytics
+
+- DuckDB
+- dbt staging models
+- dbt marts for vulnerability, vendor, CWE, and monthly views
+
+### Quality checks
+
+The Gold validation checks include:
+
+- required columns;
+- missing or duplicate CVE IDs;
+- CVSS, EPSS, and risk-score ranges;
+- valid priority values;
+- known-exploited flag values;
+- non-empty aggregate outputs;
+- valid month ranges.
+
+The generated report is stored in `reports/data_quality_report.csv`.
+
+## API
+
+Run locally at:
 
 ```text
 http://127.0.0.1:8001
 ```
 
-Important endpoints:
+Main routes:
 
 ```text
 GET  /livez
 GET  /readyz
+GET  /health
 GET  /metrics
 GET  /vulnerabilities/top
 GET  /vulnerabilities/{cve_id}
@@ -110,7 +144,15 @@ POST /score-kev-horizon
 GET  /remediation/{cve_id}
 ```
 
-`/livez` checks that the service process is running. `/readyz` checks the database and model and returns HTTP 503 until both are usable.
+`/livez` only checks that the service process is running.
+
+`/readyz` checks whether the DuckDB database can be queried and whether the model artifact can be loaded. It returns HTTP 503 until both are usable.
+
+## Monitoring
+
+The API writes a small CSV usage log with route, status code, response time, and client host, then exposes summary values through `/metrics`.
+
+This is enough for a portfolio demo, but it is not the same as a proper centralised monitoring stack.
 
 ## Local setup
 
@@ -124,9 +166,9 @@ python -m pip install -r requirements.txt
 python -m pip install -e .
 ```
 
-PySpark on Windows may also require Java and a local Hadoop `winutils.exe` setup.
+PySpark on Windows may also need Java and a local Hadoop `winutils.exe` setup.
 
-Run the data pipeline:
+Run the pipeline:
 
 ```powershell
 python .\scripts\run_pipeline.py
@@ -138,7 +180,7 @@ Train the model:
 python .\scripts\run_ml.py
 ```
 
-Prepare the dashboard snapshot:
+Prepare the dashboard data:
 
 ```powershell
 python .\scripts\prepare_dashboard_data.py
@@ -158,61 +200,66 @@ python .\scripts\run_api.py
 
 ## Docker
 
-Docker Compose mounts the locally built DuckDB database and model artifacts:
-
 ```powershell
 docker compose build
 docker compose up -d
 python .\scripts\smoke_test_api.py
 ```
 
-The image-only CI job checks `/livez` and also confirms that `/readyz` correctly returns 503 when runtime artifacts are absent. This avoids treating a running Uvicorn process as a ready application.
+The Docker CI job checks both sides of readiness behaviour:
+
+- `/livez` should work when the process is running;
+- `/readyz` should return 503 when the required runtime artifacts are missing.
+
+That avoids treating a running Uvicorn process as a ready application.
 
 ## AWS Terraform
 
-The Terraform template covers VPC networking, ALB, ECS Fargate, ECR, S3, IAM and CloudWatch. The API image is separate from the runtime database/model artifacts; ECS retrieves the configured artifact keys from S3 at startup.
+`infrastructure/aws/` contains Terraform for:
 
-See [`infrastructure/aws/README.md`](infrastructure/aws/README.md) for the deployment flow and remaining production work.
+- VPC networking
+- ALB
+- ECS Fargate
+- ECR
+- S3
+- IAM
+- CloudWatch
+
+The container image and runtime model/database artifacts are kept separate. The proposed ECS task downloads configured artifacts from S3 at startup.
+
+The Terraform is formatted, initialised without a backend, and validated in CI. I have not applied it to create a live AWS environment.
+
+See [infrastructure/aws/README.md](infrastructure/aws/README.md) for the deployment design.
 
 ## Tests and CI
 
-GitHub Actions runs:
+GitHub Actions currently runs:
 
-- Python compile and pytest checks
-- Docker image build and liveness test
-- Terraform format/init/validate
+- Python compilation and pytest;
+- Docker build plus startup/liveness checks;
+- Terraform format/init/validate.
 
-The test suite covers remediation rules/retrieval and API liveness/readiness behaviour. ETL fixture coverage is still an area for further work.
+The Python tests cover the API and remediation logic. ETL fixture coverage is still thinner than I would like, so that is one of the next areas I would work on.
 
-## Data quality
+## Current limitations
 
-Gold-layer checks cover:
+- EPSS uses the current daily bulk file; the pipeline does not reconstruct the historical EPSS value that was available on every CVE publication date.
+- The NVD side is still a retrospective current-snapshot benchmark rather than a point-in-time archive.
+- The remediation knowledge base is small.
+- Most transformation logic is still in PySpark; dbt currently sits on top of already-aggregated Gold data.
+- ETL integration fixtures are limited.
+- The Streamlit deployment reads a committed Gold snapshot instead of rebuilding the Spark pipeline online.
+- The AWS infrastructure is designed and validated but not deployed.
+- There is no scheduled orchestration/backfill system yet.
 
-- required columns
-- CVE nulls and duplicates
-- CVSS/EPSS/risk ranges
-- accepted priority values
-- known-exploited flag values
-- non-empty aggregate tables
-- month range checks
+## What I would add next
 
-The generated report is stored in `reports/data_quality_report.csv`.
-
-## Known limitations
-
-- The pipeline uses the current daily EPSS bulk file; it does not yet reconstruct historical EPSS values at each CVE publication date.
-- The remediation knowledge base is intentionally small.
-- dbt currently sits on top of already-aggregated Gold data, so most transformation logic is still in PySpark.
-- The AWS configuration is validated in CI but should not be described as deployed unless the resources have actually been applied.
-- The current Streamlit deployment reads a committed Gold snapshot rather than rebuilding the Spark pipeline in the hosted environment.
-
-## Next engineering steps
-
-1. Point-in-time EPSS history for retrospective analyses.
-2. Scheduled orchestration with retry/backfill/freshness handling.
-3. More dbt-owned dimensional and business logic.
-4. ETL/API integration fixtures and broader test coverage.
-5. Versioned artifact publishing and an AWS deployment workflow.
+1. Point-in-time EPSS history.
+2. Scheduled orchestration with retry, freshness checks, and backfill handling.
+3. More business logic moved into dbt.
+4. Better ETL/API integration fixtures.
+5. Versioned artifact publishing for the model and DuckDB database.
+6. A real AWS deployment workflow if I decide to run the infrastructure.
 
 ## Repository layout
 
@@ -222,7 +269,7 @@ app/                 Streamlit dashboard and committed snapshot
 dbt/                 dbt project
 infrastructure/aws/  Terraform
 ml/                  model training
-rag/                 remediation retrieval and knowledge base
+rag/                 retrieval-assisted remediation rules
 reports/             generated evaluation reports
 scripts/             pipeline and utility commands
 src/cyber_risk/      ingestion, PySpark ETL, quality checks
